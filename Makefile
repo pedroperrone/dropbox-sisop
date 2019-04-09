@@ -15,6 +15,6 @@ example.o: $(SRC_DIR)/example.c
 	$(CC) -c -o $(BIN_DIR)/example.o $(SRC_DIR)/example.c $(FLAGS)
 
 clean:
-	rm $(BIN_DIR)/*.o
+	rm $(BIN_DIR)/*.o dropbox
 
 
