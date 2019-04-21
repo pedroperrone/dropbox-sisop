@@ -1,12 +1,43 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include "../include/connection.h"
 #include <stdio.h>
+
+#define PORT 4000
+
+void initializeMainSocket(int *serverfd, struct sockaddr_in *address) {
+    struct sockaddr_in add;
+    // Creating socket file descriptor
+    if ((*serverfd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+        perror("socket failed");
+        exit(EXIT_FAILURE);
+    }
+
+    add.sin_family = AF_INET;
+    add.sin_port = htons(PORT);
+    add.sin_addr.s_addr = INADDR_ANY;
+
+    // Bind socket to address
+    if (bind(*serverfd, (struct sockaddr *)&add, sizeof(add)) < 0) {
+        perror("bind failed");
+        exit(EXIT_FAILURE);
+    }
+    if (listen(*serverfd, 5) < 0){
+        perror("listen failure");
+        exit(EXIT_FAILURE);
+    }
+    *address = add;
+}
+
+void handleNewRequest(int mainSocket, struct sockaddr_in address) {
+    int new_socket, addrlen, *newSocketPointer;
+    pthread_t deamonThread;
+    if ((new_socket = accept(mainSocket, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) {
+        perror("accept");
+        exit(EXIT_FAILURE);
+    }
+    newSocketPointer = (int *)malloc(sizeof(int));
+    memcpy(newSocketPointer, &new_socket, sizeof(int));
+    pthread_create(&deamonThread, NULL, processConnection, (void *)newSocketPointer);
+}
 
 void* processConnection(void *clientSocket) {
     int socket = *(int *) clientSocket;
