@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 int port;
+
 char failureByteMessage[1] = {FAILURE_BYTE_MESSAGE};
 char successByteMessage[1] = {SUCCESS_BYTE_MESSAGE};
 
