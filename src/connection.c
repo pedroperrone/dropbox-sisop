@@ -1,7 +1,11 @@
 #include "../include/connection.h"
 #include <stdio.h>
 
-#define PORT 4000
+int port;
+
+void setPort(int portValue) {
+    port = portValue;
+}
 
 void initializeMainSocket(int *serverfd, struct sockaddr_in *address) {
     struct sockaddr_in add;
@@ -12,7 +16,7 @@ void initializeMainSocket(int *serverfd, struct sockaddr_in *address) {
     }
 
     add.sin_family = AF_INET;
-    add.sin_port = htons(PORT);
+    add.sin_port = htons(port);
     add.sin_addr.s_addr = INADDR_ANY;
 
     // Bind socket to address

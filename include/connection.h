@@ -21,6 +21,7 @@ typedef struct package {
     char data[PACKAGE_SIZE];
 } PACKAGE;
 
+void setPort(int portValue);
 void* processConnection(void* clientSocket);
 void initializeMainSocket(int *serverfd, struct sockaddr_in *address);
 void handleNewRequest(int mainSocket, struct sockaddr_in address);
