@@ -1,4 +1,5 @@
 #include "../include/connection.h"
+#include "../include/user.h"
 
 int main(int argc, char *argv[]) {
     int server_fd;
@@ -6,6 +7,9 @@ int main(int argc, char *argv[]) {
     if(argc < 2) {
         printf("Missing parameter: port");
         return 1;
+    }
+    if(initializeUsersList() == 0) {
+        perror("Error initializing users list");
     }
     setPort(atoi(argv[1]));
     initializeMainSocket(&server_fd, &address);

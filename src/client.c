@@ -7,20 +7,20 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include "../include/connection.h"
+#include "../include/user.h"
 
 #define PORT 4000
 
 int main(int argc, char *argv[])
 {
-    // int sockfd, n;
-    int sockfd;
+    int sockfd, n;
     struct sockaddr_in serv_addr;
     struct hostent *server;
 
     // char buffer[256];
-    if (argc < 2)
+    if (argc < 4)
     {
-        fprintf(stderr, "usage %s hostname\n", argv[0]);
+        fprintf(stderr, "usage %s hostname username filename\n", argv[0]);
         exit(0);
     }
 
@@ -60,7 +60,9 @@ int main(int argc, char *argv[])
 
     // printf("%s\n", buffer);
 
-    FILE *file = fopen(argv[2], "r");
+    n = write(sockfd, argv[2], USERNAME_LENGTH);
+
+    FILE *file = fopen(argv[3], "r");
     if(file == NULL) {
         printf("Error opening file");
         return 0;

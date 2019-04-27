@@ -11,8 +11,11 @@
 #include <netdb.h>
 #include <pthread.h>
 #include <math.h>
+#include "../include/user.h"
 
 #define PACKAGE_SIZE 4096
+#define FAILURE_BYTE_MESSAGE 'F'
+#define SUCCESS_BYTE_MESSAGE 'S'
 
 typedef struct package {
     int totalSize;
@@ -30,5 +33,7 @@ int receiveFile(int socketDescriptor);
 int receivePackage(PACKAGE *package, int socketDescriptor);
 int writePackage(PACKAGE package, FILE *file);
 int calculateFileSize(FILE *fileDescriptor);
+int readAmountOfBytes(void *buffer, int socketDescriptor, int amountOfBytes);
+int getUsernameFromNewConnection(int newSocket, char username[]);
 
 #endif
