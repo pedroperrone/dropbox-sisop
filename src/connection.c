@@ -41,12 +41,77 @@ void handleNewRequest(int mainSocket, struct sockaddr_in address) {
 
 void* processConnection(void *clientSocket) {
     int socket = *(int *) clientSocket;
-    int valread;
-    char buffer[1024] = {0};
-    char* receivedMessage = "Message received";
-    valread = read(socket, buffer, 1024);
-    printf("Read message: %s\n", buffer);
-    send(socket, receivedMessage, strlen(receivedMessage), 0);
-    printf("Confirmation message sent\n");
+    // int valread;
+    // char buffer[1024] = {0};
+    // char* receivedMessage = "Message received";
+    // valread = read(socket, buffer, 1024);
+    // printf("Read message: %s\n", buffer);
+    // send(socket, receivedMessage, strlen(receivedMessage), 0);
+    // printf("Confirmation message sent\n");
+    receiveFile(socket);
     return NULL;
+}
+
+int sendFile(FILE *fileDescriptor, int socketDescriptor) {
+    PACKAGE package;
+    int wroteBytes;
+    package.totalSize = calculateFileSize(fileDescriptor);
+    package.index = 1;
+    while ((package.dataSize = fread(&(package.data), 1, PACKAGE_SIZE, fileDescriptor)) == PACKAGE_SIZE) {
+        wroteBytes = write(socketDescriptor, &package, sizeof(PACKAGE));
+        package.index++;
+    }
+    wroteBytes = write(socketDescriptor, &package, sizeof(PACKAGE));
+    package.index++;
+    return 1;
+}
+
+int receiveFile(int socketDescriptor) {
+    PACKAGE package;
+    FILE *receivedFile;
+    if((receivedFile = fopen("received_file.txt", "w")) == NULL) {
+        return 0;
+    }
+    do {
+        bzero(&(package), sizeof(PACKAGE));
+        if(receivePackage(&package, socketDescriptor) == 0) {
+            fclose(receivedFile);
+            return 0;
+        }
+        if(writePackage(package, receivedFile) == 0) {
+            fclose(receivedFile);
+            return 0;
+        }
+    } while(package.index != package.totalSize);
+    fclose(receivedFile);
+    return 1;
+}
+
+int receivePackage(PACKAGE *package, int socketDescriptor) {
+    int totalReadBytes = 0, bytesToRead, partialReadBytes;
+    while ((bytesToRead = sizeof(PACKAGE) - totalReadBytes) != 0) {
+        partialReadBytes = read(socketDescriptor, (package + totalReadBytes), bytesToRead);
+        if (partialReadBytes <= 0) {
+            return 0;
+        }
+        totalReadBytes += partialReadBytes;
+    }
+    return 1;
+}
+
+int writePackage(PACKAGE package, FILE *file) {
+    int wroteBytes;
+    wroteBytes = fwrite(&(package.data), 1, package.dataSize, file);
+    if (wroteBytes != package.dataSize) {
+        return 0;
+    }
+    return 1;
+}
+
+int calculateFileSize(FILE *fileDescriptor) {
+    int fileSize;
+    fseek(fileDescriptor, 0, SEEK_END);
+    fileSize = ftell(fileDescriptor);
+    fseek(fileDescriptor, 0, SEEK_SET);
+    return ceil((float) fileSize / (float) PACKAGE_SIZE);
 }

@@ -6,16 +6,18 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include "../include/connection.h"
 
 #define PORT 4000
 
 int main(int argc, char *argv[])
 {
-    int sockfd, n;
+    // int sockfd, n;
+    int sockfd;
     struct sockaddr_in serv_addr;
     struct hostent *server;
 
-    char buffer[256];
+    // char buffer[256];
     if (argc < 2)
     {
         fprintf(stderr, "usage %s hostname\n", argv[0]);
@@ -40,23 +42,30 @@ int main(int argc, char *argv[])
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
         printf("ERROR connecting\n");
 
-    printf("Enter the message: ");
-    bzero(buffer, 256);
-    fgets(buffer, 256, stdin);
+    // printf("Enter the message: ");
+    // bzero(buffer, 256);
+    // fgets(buffer, 256, stdin);
 
-    /* write in the socket */
-    n = write(sockfd, buffer, strlen(buffer));
-    if (n < 0)
-        printf("ERROR writing to socket\n");
+    // /* write in the socket */
+    // n = write(sockfd, buffer, strlen(buffer));
+    // if (n < 0)
+    //     printf("ERROR writing to socket\n");
 
-    bzero(buffer, 256);
+    // bzero(buffer, 256);
 
-    /* read from the socket */
-    n = read(sockfd, buffer, 256);
-    if (n < 0)
-        printf("ERROR reading from socket\n");
+    // /* read from the socket */
+    // n = read(sockfd, buffer, 256);
+    // if (n < 0)
+    //     printf("ERROR reading from socket\n");
 
-    printf("%s\n", buffer);
+    // printf("%s\n", buffer);
+
+    FILE *file = fopen(argv[2], "r");
+    if(file == NULL) {
+        printf("Error opening file");
+        return 0;
+    }
+    sendFile(file, sockfd);
 
     close(sockfd);
     return 0;
