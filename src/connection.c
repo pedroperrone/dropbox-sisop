@@ -1,7 +1,13 @@
 #include "../include/connection.h"
 #include <stdio.h>
 
-#define PORT 4000
+int port;
+char failureByteMessage[1] = {FAILURE_BYTE_MESSAGE};
+char successByteMessage[1] = {SUCCESS_BYTE_MESSAGE};
+
+void setPort(int portValue) {
+    port = portValue;
+}
 
 void initializeMainSocket(int *serverfd, struct sockaddr_in *address) {
     struct sockaddr_in add;
@@ -12,7 +18,7 @@ void initializeMainSocket(int *serverfd, struct sockaddr_in *address) {
     }
 
     add.sin_family = AF_INET;
-    add.sin_port = htons(PORT);
+    add.sin_port = htons(port);
     add.sin_addr.s_addr = INADDR_ANY;
 
     // Bind socket to address
@@ -30,13 +36,28 @@ void initializeMainSocket(int *serverfd, struct sockaddr_in *address) {
 void handleNewRequest(int mainSocket, struct sockaddr_in address) {
     int new_socket, addrlen, *newSocketPointer;
     pthread_t deamonThread;
+    char username[USERNAME_LENGTH];
     if ((new_socket = accept(mainSocket, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) {
         perror("accept");
         exit(EXIT_FAILURE);
     }
     newSocketPointer = (int *)malloc(sizeof(int));
+    if(getUsernameFromNewConnection(new_socket, username) == 0) {
+        perror("Error receiving username");
+    }
+    if (createSession(username, new_socket) != 1) {
+        write(new_socket, failureByteMessage, 1);
+        close(new_socket);
+        return;
+    }
+    // printUsers();
+    write(new_socket, successByteMessage, 1);
     memcpy(newSocketPointer, &new_socket, sizeof(int));
     pthread_create(&deamonThread, NULL, processConnection, (void *)newSocketPointer);
+}
+
+int getUsernameFromNewConnection(int newSocket, char username[]) {
+    return readAmountOfBytes(username, newSocket, USERNAME_LENGTH);
 }
 
 void* processConnection(void *clientSocket) {
@@ -69,7 +90,17 @@ int sendFile(FILE *fileDescriptor, int socketDescriptor) {
 int receiveFile(int socketDescriptor) {
     PACKAGE package;
     FILE *receivedFile;
-    if((receivedFile = fopen("received_file.txt", "w")) == NULL) {
+    USER *user;
+    char filename[256];
+    // printUsers();
+    user = findUserFromSocket(socketDescriptor);
+    if(user == NULL) {
+        perror("No user with the current socket");
+    }
+    mkdir(user->username, 0777);
+    strcpy(filename, user->username);
+    strcat(filename, "/received_file.txt");
+    if ((receivedFile = fopen(filename, "w")) == NULL) {
         return 0;
     }
     do {
@@ -88,9 +119,13 @@ int receiveFile(int socketDescriptor) {
 }
 
 int receivePackage(PACKAGE *package, int socketDescriptor) {
+    return readAmountOfBytes(package, socketDescriptor, sizeof(PACKAGE));
+}
+
+int readAmountOfBytes(void *buffer, int socketDescriptor, int amountOfBytes) {
     int totalReadBytes = 0, bytesToRead, partialReadBytes;
-    while ((bytesToRead = sizeof(PACKAGE) - totalReadBytes) != 0) {
-        partialReadBytes = read(socketDescriptor, (package + totalReadBytes), bytesToRead);
+    while ((bytesToRead = amountOfBytes - totalReadBytes) != 0) {
+        partialReadBytes = read(socketDescriptor, (buffer + totalReadBytes), bytesToRead);
         if (partialReadBytes <= 0) {
             return 0;
         }
