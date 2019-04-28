@@ -63,6 +63,7 @@ int getUsernameFromNewConnection(int newSocket, char username[]) {
 
 void* processConnection(void *clientSocket) {
     int socket = *(int *) clientSocket;
+    PACKAGE firstPackage;
     // int valread;
     // char buffer[1024] = {0};
     // char* receivedMessage = "Message received";
@@ -70,7 +71,19 @@ void* processConnection(void *clientSocket) {
     // printf("Read message: %s\n", buffer);
     // send(socket, receivedMessage, strlen(receivedMessage), 0);
     // printf("Confirmation message sent\n");
-    receiveFile(socket);
+    do {
+        receivePackage(&firstPackage, socket);
+        switch (firstPackage.command){
+            case UPLOAD:
+            // printf("É upload\n");
+                receiveFile(socket, firstPackage);
+                break;
+        
+            default:
+                break;
+        }
+    } while(firstPackage.command != EXIT);
+    // receiveFile(socket, firstPackage);
     return NULL;
 }
 
@@ -79,6 +92,7 @@ int sendFile(FILE *fileDescriptor, int socketDescriptor) {
     int wroteBytes;
     package.totalSize = calculateFileSize(fileDescriptor);
     package.index = 1;
+    package.command = UPLOAD;
     while ((package.dataSize = fread(&(package.data), 1, PACKAGE_SIZE, fileDescriptor)) == PACKAGE_SIZE) {
         wroteBytes = write(socketDescriptor, &package, sizeof(PACKAGE));
         package.index++;
@@ -88,12 +102,13 @@ int sendFile(FILE *fileDescriptor, int socketDescriptor) {
     return 1;
 }
 
-int receiveFile(int socketDescriptor) {
+int receiveFile(int socketDescriptor, PACKAGE firstPackage) {
     PACKAGE package;
     FILE *receivedFile;
     USER *user;
     char filename[256];
     // printUsers();
+    package = firstPackage;
     user = findUserFromSocket(socketDescriptor);
     if(user == NULL) {
         perror("No user with the current socket");
@@ -104,20 +119,27 @@ int receiveFile(int socketDescriptor) {
     if ((receivedFile = fopen(filename, "w")) == NULL) {
         return 0;
     }
-    do {
+    while (package.index != package.totalSize) {
+        printf("TA AQUI");
+        if (writePackage(package, receivedFile) == 0) {
+            fclose(receivedFile);
+            return 0;
+        }
         bzero(&(package), sizeof(PACKAGE));
-        if(receivePackage(&package, socketDescriptor) == 0) {
+        if (receivePackage(&package, socketDescriptor) == 0) {
             fclose(receivedFile);
             return 0;
         }
-        if(writePackage(package, receivedFile) == 0) {
-            fclose(receivedFile);
-            return 0;
-        }
-    } while(package.index != package.totalSize);
+    }
+    if (writePackage(package, receivedFile) == 0) {
+        fclose(receivedFile);
+        return 0;
+    }
     fclose(receivedFile);
     return 1;
 }
+
+
 
 int receivePackage(PACKAGE *package, int socketDescriptor) {
     return readAmountOfBytes(package, socketDescriptor, sizeof(PACKAGE));
@@ -126,8 +148,9 @@ int receivePackage(PACKAGE *package, int socketDescriptor) {
 int readAmountOfBytes(void *buffer, int socketDescriptor, int amountOfBytes) {
     int totalReadBytes = 0, bytesToRead, partialReadBytes;
     while ((bytesToRead = amountOfBytes - totalReadBytes) != 0) {
+        printf("ESPERANDO");
         partialReadBytes = read(socketDescriptor, (buffer + totalReadBytes), bytesToRead);
-        if (partialReadBytes <= 0) {
+        if (partialReadBytes < 0) {
             return 0;
         }
         totalReadBytes += partialReadBytes;

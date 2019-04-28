@@ -13,12 +13,14 @@
 #include <math.h>
 #include <sys/stat.h>
 #include "../include/user.h"
+#include "../include/command.h"
 
 #define PACKAGE_SIZE 4096
 #define FAILURE_BYTE_MESSAGE 'F'
 #define SUCCESS_BYTE_MESSAGE 'S'
 
 typedef struct package {
+    int command;
     int totalSize;
     int index;
     int dataSize;
@@ -30,7 +32,7 @@ void* processConnection(void* clientSocket);
 void initializeMainSocket(int *serverfd, struct sockaddr_in *address);
 void handleNewRequest(int mainSocket, struct sockaddr_in address);
 int sendFile(FILE *fileDescriptor, int socketDescriptor);
-int receiveFile(int socketDescriptor);
+int receiveFile(int socketDescriptor, PACKAGE firstPackage);
 int receivePackage(PACKAGE *package, int socketDescriptor);
 int writePackage(PACKAGE package, FILE *file);
 int calculateFileSize(FILE *fileDescriptor);
