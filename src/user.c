@@ -16,13 +16,13 @@ int createSession(char username[], int socketDescriptor) {
             return -1;
         }
         memcpy(&(userPointer->username), username, USERNAME_LENGTH);
-        userPointer->sessionOne = socketDescriptor;
         userPointer->sessionTwo = 0;
-        return 1;
+        userPointer->sessionTwo = 0;
+        add(userPointer, usersList);
     }
     if(userHasFreeSession(*userPointer)) {
         setSession(userPointer, socketDescriptor);
-        add(userPointer, usersList);
+        fflush(stdout);
         return 1;
     }
     return 0;
@@ -42,22 +42,35 @@ void setSession(USER* user, int socketDescriptor) {
     }
 }
 
-// USER *findUserFromSocket(int socketDescriptor) {
-//     NODE *current = usersList->head;
-//     USER *userPointer;
-//     if (current == NULL) {
-//         return NULL;
-//     }
-//     while (current != NULL) {
-//         userPointer = (USER *)current->data;
-//         if (socketBelongsToUser(*userPointer, socketDescriptor)) {
-//             return userPointer;
-//         }
-//         current = current->next;
-//     }
-//     return NULL;
-// }
+void printUsers() {
+    NODE *current = usersList->head;
+    USER* userPtr;
+    while(current != NULL) {
+        userPtr = (USER*) current->data;
+        printf("Username: %s\n", userPtr->username);
+        printf("Socket 1: %d\n", userPtr->sessionOne);
+        printf("Socket 2: %d\n\n", userPtr->sessionTwo);
+        current = current->next;
+    }
+    printf("FIM DA LISTA DE USERS\n\n");
+}
 
-// int socketBelongsToUser(USER user, int socketDescriptor) {
-//     return user.sessionOne == socketDescriptor || user.sessionTwo == socketDescriptor;
-// }
+USER *findUserFromSocket(int socketDescriptor) {
+    NODE *current = usersList->head;
+    USER *userPointer;
+    if (current == NULL) {
+        return NULL;
+    }
+    while (current != NULL) {
+        userPointer = (USER *)current->data;
+        if (socketBelongsToUser(*userPointer, socketDescriptor)) {
+            return userPointer;
+        }
+        current = current->next;
+    }
+    return NULL;
+}
+
+int socketBelongsToUser(USER user, int socketDescriptor) {
+    return user.sessionOne == socketDescriptor || user.sessionTwo == socketDescriptor;
+}

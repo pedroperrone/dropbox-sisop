@@ -2,6 +2,7 @@
 #define __user__
 
 #include <string.h>
+#include <stdio.h>
 #include "../include/linked_list.h"
 
 #define USERNAME_LENGTH 64
@@ -16,8 +17,8 @@ int initializeUsersList();
 int createSession(char username[], int socketDescriptor);
 int userHasFreeSession(USER user);
 void setSession(USER *user, int socketDescriptor);
-// char* findUsernameFromSocket(int socketDescriptor);
-// USER *findUserFromSocket(int socketDescriptor);
-// int socketBelongsToUser(USER user, int socketDescriptor);
+USER *findUserFromSocket(int socketDescriptor);
+int socketBelongsToUser(USER user, int socketDescriptor);
+void printUsers();
 
 #endif

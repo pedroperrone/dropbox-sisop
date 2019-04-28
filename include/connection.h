@@ -11,6 +11,7 @@
 #include <netdb.h>
 #include <pthread.h>
 #include <math.h>
+#include <sys/stat.h>
 #include "../include/user.h"
 
 #define PACKAGE_SIZE 4096

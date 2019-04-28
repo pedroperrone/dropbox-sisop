@@ -69,7 +69,7 @@ void* findUser(char username[], LIST *list) {
     }
     while(current != NULL) {
         userPointer = (USER*) current->data;
-        if(strncmp(userPointer->username, username, USERNAME_LENGTH) != 0) {
+        if(strncmp(userPointer->username, username, USERNAME_LENGTH) == 0) {
             return userPointer;
         }
         current = current->next;

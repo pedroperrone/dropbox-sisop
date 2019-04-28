@@ -17,7 +17,7 @@ connection.o: $(SRC_DIR)/connection.c user.o
 	$(CC) -c -o $(BIN_DIR)/connection.o $(SRC_DIR)/connection.c $(FLAGS)
 
 client: client.o connection.o
-	$(CC) -o dropboxClient $(BIN_DIR)/client.o $(FLAGS) $(BIN_DIR)/connection.o
+	$(CC) -o dropboxClient $(BIN_DIR)/client.o $(BIN_DIR)/connection.o  $(BIN_DIR)/user.o $(BIN_DIR)/linked_list.o $(FLAGS)
 
 client.o: $(SRC_DIR)/client.c
 	$(CC) -c -o $(BIN_DIR)/client.o $(SRC_DIR)/client.c $(FLAGS)

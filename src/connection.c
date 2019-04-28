@@ -45,14 +45,12 @@ void handleNewRequest(int mainSocket, struct sockaddr_in address) {
     if(getUsernameFromNewConnection(new_socket, username) == 0) {
         perror("Error receiving username");
     }
-    printf("username: %s", username);
     fflush(stdout);
-    // if (createSession(username, new_socket) != 1)
-    // {
-    //     write(new_socket, failureByteMessage, 1);
-    //     close(new_socket);
-    //     return;
-    // }
+    if (createSession(username, new_socket) != 1) {
+        write(new_socket, failureByteMessage, 1);
+        close(new_socket);
+        return;
+    }
     write(new_socket, successByteMessage, 1);
     memcpy(newSocketPointer, &new_socket, sizeof(int));
     pthread_create(&deamonThread, NULL, processConnection, (void *)newSocketPointer);
@@ -92,9 +90,17 @@ int sendFile(FILE *fileDescriptor, int socketDescriptor) {
 int receiveFile(int socketDescriptor) {
     PACKAGE package;
     FILE *receivedFile;
-    // USER *user;
-    // user = findUserFromSocket(socketDescriptor);
-    if((receivedFile = fopen("received_file.txt", "w")) == NULL) {
+    USER *user;
+    char filename[256];
+    // printUsers();
+    user = findUserFromSocket(socketDescriptor);
+    if(user == NULL) {
+        perror("No user with the current socket");
+    }
+    mkdir(user->username, 0777);
+    strcpy(filename, user->username);
+    strcat(filename, "/received_file.txt");
+    if ((receivedFile = fopen(filename, "w")) == NULL) {
         return 0;
     }
     do {
