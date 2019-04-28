@@ -45,12 +45,12 @@ void handleNewRequest(int mainSocket, struct sockaddr_in address) {
     if(getUsernameFromNewConnection(new_socket, username) == 0) {
         perror("Error receiving username");
     }
-    fflush(stdout);
     if (createSession(username, new_socket) != 1) {
         write(new_socket, failureByteMessage, 1);
         close(new_socket);
         return;
     }
+    // printUsers();
     write(new_socket, successByteMessage, 1);
     memcpy(newSocketPointer, &new_socket, sizeof(int));
     pthread_create(&deamonThread, NULL, processConnection, (void *)newSocketPointer);

@@ -19,6 +19,5 @@ LIST *createList();
 void add(void* data, LIST *list);
 void removeFromList(void* data, LIST *list);
 void destroy(LIST *list);
-void *findUser(char username[], LIST *list);
 
 #endif

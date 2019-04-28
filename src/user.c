@@ -9,7 +9,7 @@ int initializeUsersList() {
 
 int createSession(char username[], int socketDescriptor) {
     USER *userPointer;
-    userPointer = (USER*) findUser(username, usersList);
+    userPointer = (USER*) findUser(username);
     if(userPointer == NULL) {
         userPointer = (USER*) malloc(sizeof(USER));
         if(userPointer == NULL) {
@@ -73,4 +73,20 @@ USER *findUserFromSocket(int socketDescriptor) {
 
 int socketBelongsToUser(USER user, int socketDescriptor) {
     return user.sessionOne == socketDescriptor || user.sessionTwo == socketDescriptor;
+}
+
+void *findUser(char username[]) {
+    NODE *current = usersList->head;
+    USER *userPointer;
+    if (current == NULL) {
+        return NULL;
+    }
+    while (current != NULL) {
+        userPointer = (USER *)current->data;
+        if (strncmp(userPointer->username, username, USERNAME_LENGTH) == 0) {
+            return userPointer;
+        }
+        current = current->next;
+    }
+    return NULL;
 }

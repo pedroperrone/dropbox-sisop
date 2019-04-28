@@ -19,6 +19,7 @@ int userHasFreeSession(USER user);
 void setSession(USER *user, int socketDescriptor);
 USER *findUserFromSocket(int socketDescriptor);
 int socketBelongsToUser(USER user, int socketDescriptor);
+void *findUser(char username[]);
 void printUsers();
 
 #endif

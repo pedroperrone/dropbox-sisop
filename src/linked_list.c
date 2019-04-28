@@ -60,19 +60,3 @@ void destroy(LIST *list) {
     }
     free(list);
 }
-
-void* findUser(char username[], LIST *list) {
-    NODE *current = list->head;
-    USER *userPointer;
-    if(current == NULL) {
-        return NULL;
-    }
-    while(current != NULL) {
-        userPointer = (USER*) current->data;
-        if(strncmp(userPointer->username, username, USERNAME_LENGTH) == 0) {
-            return userPointer;
-        }
-        current = current->next;
-    }
-    return NULL;
-}
