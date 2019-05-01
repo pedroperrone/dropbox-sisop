@@ -21,6 +21,7 @@ void initializeMainSocket(int *serverfd, struct sockaddr_in *address) {
     add.sin_family = AF_INET;
     add.sin_port = htons(port);
     add.sin_addr.s_addr = INADDR_ANY;
+    bzero(&(add.sin_zero), 8);
 
     // Bind socket to address
     if (bind(*serverfd, (struct sockaddr *)&add, sizeof(add)) < 0) {
@@ -64,13 +65,8 @@ int getUsernameFromNewConnection(int newSocket, char username[]) {
 void* processConnection(void *clientSocket) {
     int socket = *(int *) clientSocket;
     PACKAGE firstPackage;
-    // int valread;
-    // char buffer[1024] = {0};
-    // char* receivedMessage = "Message received";
-    // valread = read(socket, buffer, 1024);
-    // printf("Read message: %s\n", buffer);
-    // send(socket, receivedMessage, strlen(receivedMessage), 0);
-    // printf("Confirmation message sent\n");
+    COMMAND_PACKAGE commandPackage;
+    receiveCommandPackage(&commandPackage, socket);
     do {
         receivePackage(&firstPackage, socket);
         switch (firstPackage.command){
@@ -86,17 +82,29 @@ void* processConnection(void *clientSocket) {
     return NULL;
 }
 
-int sendFile(FILE *fileDescriptor, int socketDescriptor) {
+int sendFile(FILE *fileDescriptor, int socketDescriptor, char filename[]) {
     PACKAGE package;
+    COMMAND_PACKAGE commandPackage;
+
+    commandPackage.command = UPLOAD;
+    commandPackage.dataPackagesAmount = calculateFileSize(fileDescriptor);
+    strncpy((char*) &(commandPackage.filename), filename, FILENAME_LENGTH);
+    write(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE));
+
     package.totalSize = calculateFileSize(fileDescriptor);
     package.index = 1;
     package.command = UPLOAD;
     while ((package.dataSize = fread(&(package.data), 1, PACKAGE_SIZE, fileDescriptor)) == PACKAGE_SIZE) {
-        write(socketDescriptor, &package, sizeof(PACKAGE));
+        if(write(socketDescriptor, &package, sizeof(PACKAGE)) < sizeof(PACKAGE)) {
+            perror("Error on sending data");
+            return 0;
+        }
         package.index++;
     }
-    package.index++;
-    write(socketDescriptor, &package, sizeof(PACKAGE));
+    if (write(socketDescriptor, &package, sizeof(PACKAGE)) < sizeof(PACKAGE)) {
+        perror("Error on sending data");
+        return 0;
+    }
     return 1;
 }
 
@@ -106,6 +114,10 @@ int receiveFile(int socketDescriptor, PACKAGE firstPackage) {
     USER *user;
     char filename[256];
     // printUsers();
+    printf("Indice: %d\n", firstPackage.index);
+    printf("TOTAL: %d\n", firstPackage.totalSize);
+
+
     package = firstPackage;
     user = findUserFromSocket(socketDescriptor);
     if(user == NULL) {
@@ -117,18 +129,23 @@ int receiveFile(int socketDescriptor, PACKAGE firstPackage) {
     if ((receivedFile = fopen(filename, "w")) == NULL) {
         return 0;
     }
+    fflush(stdout);
+    printf("INDICE DA PRIMEIRA ESCRITA: %d\n", package.index);
     while (package.index != package.totalSize) {
         if (writePackage(package, receivedFile) == 0) {
+            perror("Error writing package");
             fclose(receivedFile);
             return 0;
         }
         bzero(&(package), sizeof(PACKAGE));
         if (receivePackage(&package, socketDescriptor) == 0) {
+            perror("Error reading package");
             fclose(receivedFile);
             return 0;
         }
     }
     if (writePackage(package, receivedFile) == 0) {
+        perror("Error writing package");
         fclose(receivedFile);
         return 0;
     }
@@ -136,7 +153,9 @@ int receiveFile(int socketDescriptor, PACKAGE firstPackage) {
     return 1;
 }
 
-
+int receiveCommandPackage(COMMAND_PACKAGE *commandPackage, int socketDescriptor) {
+    return readAmountOfBytes(commandPackage, socketDescriptor, sizeof(COMMAND_PACKAGE));
+}
 
 int receivePackage(PACKAGE *package, int socketDescriptor) {
     return readAmountOfBytes(package, socketDescriptor, sizeof(PACKAGE));
@@ -147,7 +166,7 @@ int readAmountOfBytes(void *buffer, int socketDescriptor, int amountOfBytes) {
     while ((bytesToRead = amountOfBytes - totalReadBytes) != 0) {
         partialReadBytes = read(socketDescriptor, (buffer + totalReadBytes), bytesToRead);
         if (partialReadBytes < 0) {
-            return 0;
+            perror("Error reading socket");
         }
         totalReadBytes += partialReadBytes;
     }

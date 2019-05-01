@@ -18,6 +18,7 @@
 #define PACKAGE_SIZE 4096
 #define FAILURE_BYTE_MESSAGE 'F'
 #define SUCCESS_BYTE_MESSAGE 'S'
+#define FILENAME_LENGTH 64
 
 typedef struct package {
     int command;
@@ -27,12 +28,19 @@ typedef struct package {
     char data[PACKAGE_SIZE];
 } PACKAGE;
 
+typedef struct command_package {
+    int command;
+    int dataPackagesAmount;
+    char filename[FILENAME_LENGTH];
+} COMMAND_PACKAGE;
+
 void setPort(int portValue);
 void* processConnection(void* clientSocket);
 void initializeMainSocket(int *serverfd, struct sockaddr_in *address);
 void handleNewRequest(int mainSocket, struct sockaddr_in address);
-int sendFile(FILE *fileDescriptor, int socketDescriptor);
+int sendFile(FILE *fileDescriptor, int socketDescriptor, char filename[]);
 int receiveFile(int socketDescriptor, PACKAGE firstPackage);
+int receiveCommandPackage(COMMAND_PACKAGE *commandPackage, int socketDescriptor);
 int receivePackage(PACKAGE *package, int socketDescriptor);
 int writePackage(PACKAGE package, FILE *file);
 int calculateFileSize(FILE *fileDescriptor);

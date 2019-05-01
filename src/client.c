@@ -67,8 +67,9 @@ int main(int argc, char *argv[])
         printf("Error opening file");
         return 0;
     }
-    sendFile(file, sockfd);
+    sendFile(file, sockfd, argv[3]);
 
+    sleep(5);
 
     close(sockfd);
     return 0;
