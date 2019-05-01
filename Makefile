@@ -3,7 +3,7 @@ LIB_DIR=./lib
 INC_DIR=./include
 BIN_DIR=./bin
 SRC_DIR=./src
-FLAGS=-Wall
+FLAGS=-lpthread -lm -Wall
 
 all: server client
 
