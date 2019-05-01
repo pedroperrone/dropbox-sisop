@@ -72,8 +72,8 @@ int main(int argc, char *argv[])
     sendRemove(sockfd, "received_file.txt");
 
     sendExit(sockfd);
-    sleep(1);
+    shutdown(sockfd, 2);
+    // close(sockfd);
 
-    close(sockfd);
     return 0;
 }

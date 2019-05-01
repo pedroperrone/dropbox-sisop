@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
     setPort(atoi(argv[1]));
     initializeMainSocket(&server_fd, &address);
     while(1) {
-        handleNewRequest(server_fd, address);
+        handleNewRequest(server_fd);
     }
     close(server_fd);
     return 0;
