@@ -69,6 +69,8 @@ int main(int argc, char *argv[])
     }
     sendFile(file, sockfd, argv[3]);
 
+    sendRemove(sockfd, "received_file.txt");
+
     sendExit(sockfd);
     sleep(1);
 

@@ -71,6 +71,8 @@ void* processConnection(void *clientSocket) {
         case UPLOAD:
             receiveFile(socket, commandPackage);
             break;
+        case DELETE:
+            deleteFile(socket, commandPackage);
 
         default:
             break;
@@ -114,6 +116,17 @@ int sendExit(int socketDescriptor) {
     return 1;
 }
 
+int sendRemove(int socketDescriptor, char filename[]) {
+    COMMAND_PACKAGE commandPackage;
+    commandPackage.command = DELETE;
+    strncpy((char*) &(commandPackage.filename), filename, FILENAME_LENGTH);
+    if (write(socketDescriptor, &commandPackage, sizeof(PACKAGE)) < sizeof(PACKAGE)) {
+        perror("Error on sending data");
+        return 0;
+    }
+    return 1;
+}
+
 int receiveFile(int socketDescriptor, COMMAND_PACKAGE command) {
     PACKAGE package;
     FILE *receivedFile;
@@ -147,6 +160,19 @@ int receiveFile(int socketDescriptor, COMMAND_PACKAGE command) {
     } while (package.index != command.dataPackagesAmount);
     fclose(receivedFile);
     return 1;
+}
+
+int deleteFile(int socketDescriptor, COMMAND_PACKAGE commandPackage) {
+    USER *user;
+    char filename[FILENAME_LENGTH];
+    user = findUserFromSocket(socketDescriptor);
+    if (user == NULL) {
+        perror("No user with the current socket");
+    }
+    strncpy(filename, (char*)&(user->username), USERNAME_LENGTH);
+    strcat(filename, "/");
+    strncat(filename, (char*) &(commandPackage.filename), FILENAME_LENGTH);
+    return remove(filename) == 0;
 }
 
 int receiveCommandPackage(COMMAND_PACKAGE *commandPackage, int socketDescriptor) {
