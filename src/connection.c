@@ -75,7 +75,6 @@ void* processConnection(void *clientSocket) {
         receivePackage(&firstPackage, socket);
         switch (firstPackage.command){
             case UPLOAD:
-            // printf("É upload\n");
                 receiveFile(socket, firstPackage);
                 break;
         
@@ -83,22 +82,21 @@ void* processConnection(void *clientSocket) {
                 break;
         }
     } while(firstPackage.command != EXIT);
-    // receiveFile(socket, firstPackage);
+    // // receiveFile(socket, firstPackage);
     return NULL;
 }
 
 int sendFile(FILE *fileDescriptor, int socketDescriptor) {
     PACKAGE package;
-    int wroteBytes;
     package.totalSize = calculateFileSize(fileDescriptor);
     package.index = 1;
     package.command = UPLOAD;
     while ((package.dataSize = fread(&(package.data), 1, PACKAGE_SIZE, fileDescriptor)) == PACKAGE_SIZE) {
-        wroteBytes = write(socketDescriptor, &package, sizeof(PACKAGE));
+        write(socketDescriptor, &package, sizeof(PACKAGE));
         package.index++;
     }
-    wroteBytes = write(socketDescriptor, &package, sizeof(PACKAGE));
     package.index++;
+    write(socketDescriptor, &package, sizeof(PACKAGE));
     return 1;
 }
 
@@ -120,7 +118,6 @@ int receiveFile(int socketDescriptor, PACKAGE firstPackage) {
         return 0;
     }
     while (package.index != package.totalSize) {
-        printf("TA AQUI");
         if (writePackage(package, receivedFile) == 0) {
             fclose(receivedFile);
             return 0;
@@ -148,7 +145,6 @@ int receivePackage(PACKAGE *package, int socketDescriptor) {
 int readAmountOfBytes(void *buffer, int socketDescriptor, int amountOfBytes) {
     int totalReadBytes = 0, bytesToRead, partialReadBytes;
     while ((bytesToRead = amountOfBytes - totalReadBytes) != 0) {
-        printf("ESPERANDO");
         partialReadBytes = read(socketDescriptor, (buffer + totalReadBytes), bytesToRead);
         if (partialReadBytes < 0) {
             return 0;
