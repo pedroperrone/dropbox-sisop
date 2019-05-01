@@ -24,7 +24,8 @@ void initializeMainSocket(int *serverfd, struct sockaddr_in *address) {
     bzero(&(add.sin_zero), 8);
 
     // Bind socket to address
-    if (bind(*serverfd, (struct sockaddr *)&add, sizeof(add)) < 0) {
+    *address = add;
+    if (bind(*serverfd, (struct sockaddr *)address, sizeof(add)) < 0) {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
@@ -32,14 +33,14 @@ void initializeMainSocket(int *serverfd, struct sockaddr_in *address) {
         perror("listen failure");
         exit(EXIT_FAILURE);
     }
-    *address = add;
 }
 
-void handleNewRequest(int mainSocket, struct sockaddr_in address) {
+void handleNewRequest(int mainSocket) {
     int new_socket, addrlen, *newSocketPointer;
     pthread_t deamonThread;
+    struct sockaddr_in cliendAddress;
     char username[USERNAME_LENGTH];
-    if ((new_socket = accept(mainSocket, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) {
+    if ((new_socket = accept(mainSocket, (struct sockaddr *)&cliendAddress, (socklen_t *)&addrlen)) < 0) {
         perror("accept");
         exit(EXIT_FAILURE);
     }
