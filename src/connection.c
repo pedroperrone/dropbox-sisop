@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 int port;
+
 char failureByteMessage[1] = {FAILURE_BYTE_MESSAGE};
 char successByteMessage[1] = {SUCCESS_BYTE_MESSAGE};
 
@@ -20,6 +21,7 @@ void initializeMainSocket(int *serverfd, struct sockaddr_in *address) {
     add.sin_family = AF_INET;
     add.sin_port = htons(port);
     add.sin_addr.s_addr = INADDR_ANY;
+    bzero(&(add.sin_zero), 8);
 
     // Bind socket to address
     if (bind(*serverfd, (struct sockaddr *)&add, sizeof(add)) < 0) {
@@ -62,60 +64,119 @@ int getUsernameFromNewConnection(int newSocket, char username[]) {
 
 void* processConnection(void *clientSocket) {
     int socket = *(int *) clientSocket;
-    // int valread;
-    // char buffer[1024] = {0};
-    // char* receivedMessage = "Message received";
-    // valread = read(socket, buffer, 1024);
-    // printf("Read message: %s\n", buffer);
-    // send(socket, receivedMessage, strlen(receivedMessage), 0);
-    // printf("Confirmation message sent\n");
-    receiveFile(socket);
+    COMMAND_PACKAGE commandPackage;
+    do {
+        receiveCommandPackage(&commandPackage, socket);
+        switch (commandPackage.command) {
+        case UPLOAD:
+            receiveFile(socket, commandPackage);
+            break;
+        case DELETE:
+            deleteFile(socket, commandPackage);
+
+        default:
+            break;
+        }
+    } while (commandPackage.command != EXIT);
+    close(socket);
     return NULL;
 }
 
-int sendFile(FILE *fileDescriptor, int socketDescriptor) {
+int sendFile(FILE *fileDescriptor, int socketDescriptor, char filename[]) {
     PACKAGE package;
-    int wroteBytes;
-    package.totalSize = calculateFileSize(fileDescriptor);
+    COMMAND_PACKAGE commandPackage;
+
+    commandPackage.command = UPLOAD;
+    commandPackage.dataPackagesAmount = calculateFileSize(fileDescriptor);
+    strncpy((char*) &(commandPackage.filename), filename, FILENAME_LENGTH);
+    write(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE));
+
     package.index = 1;
     while ((package.dataSize = fread(&(package.data), 1, PACKAGE_SIZE, fileDescriptor)) == PACKAGE_SIZE) {
-        wroteBytes = write(socketDescriptor, &package, sizeof(PACKAGE));
+        if(write(socketDescriptor, &package, sizeof(PACKAGE)) < sizeof(PACKAGE)) {
+            perror("Error on sending data");
+            return 0;
+        }
         package.index++;
     }
-    wroteBytes = write(socketDescriptor, &package, sizeof(PACKAGE));
-    package.index++;
+    if (write(socketDescriptor, &package, sizeof(PACKAGE)) < sizeof(PACKAGE)) {
+        perror("Error on sending data");
+        return 0;
+    }
     return 1;
 }
 
-int receiveFile(int socketDescriptor) {
+int sendExit(int socketDescriptor) {
+    COMMAND_PACKAGE commandPackage;
+    commandPackage.command = EXIT;
+    if (write(socketDescriptor, &commandPackage, sizeof(PACKAGE)) < sizeof(PACKAGE)) {
+        perror("Error on sending data");
+        return 0;
+    }
+    return 1;
+}
+
+int sendRemove(int socketDescriptor, char filename[]) {
+    COMMAND_PACKAGE commandPackage;
+    commandPackage.command = DELETE;
+    strncpy((char*) &(commandPackage.filename), filename, FILENAME_LENGTH);
+    if (write(socketDescriptor, &commandPackage, sizeof(PACKAGE)) < sizeof(PACKAGE)) {
+        perror("Error on sending data");
+        return 0;
+    }
+    return 1;
+}
+
+int receiveFile(int socketDescriptor, COMMAND_PACKAGE command) {
     PACKAGE package;
     FILE *receivedFile;
     USER *user;
     char filename[256];
     // printUsers();
+
     user = findUserFromSocket(socketDescriptor);
     if(user == NULL) {
         perror("No user with the current socket");
     }
     mkdir(user->username, 0777);
     strcpy(filename, user->username);
-    strcat(filename, "/received_file.txt");
+    strcat(filename, "/");
+    strncat(filename, (char*) &(command.filename), FILENAME_LENGTH);
     if ((receivedFile = fopen(filename, "w")) == NULL) {
         return 0;
     }
+    fflush(stdout);
+
     do {
         bzero(&(package), sizeof(PACKAGE));
-        if(receivePackage(&package, socketDescriptor) == 0) {
+        if (receivePackage(&package, socketDescriptor) == 0) {
             fclose(receivedFile);
             return 0;
         }
-        if(writePackage(package, receivedFile) == 0) {
+        if (writePackage(package, receivedFile) == 0) {
             fclose(receivedFile);
             return 0;
         }
-    } while(package.index != package.totalSize);
+    } while (package.index != command.dataPackagesAmount);
     fclose(receivedFile);
     return 1;
+}
+
+int deleteFile(int socketDescriptor, COMMAND_PACKAGE commandPackage) {
+    USER *user;
+    char filename[FILENAME_LENGTH];
+    user = findUserFromSocket(socketDescriptor);
+    if (user == NULL) {
+        perror("No user with the current socket");
+    }
+    strncpy(filename, (char*)&(user->username), USERNAME_LENGTH);
+    strcat(filename, "/");
+    strncat(filename, (char*) &(commandPackage.filename), FILENAME_LENGTH);
+    return remove(filename) == 0;
+}
+
+int receiveCommandPackage(COMMAND_PACKAGE *commandPackage, int socketDescriptor) {
+    return readAmountOfBytes(commandPackage, socketDescriptor, sizeof(COMMAND_PACKAGE));
 }
 
 int receivePackage(PACKAGE *package, int socketDescriptor) {
@@ -126,8 +187,8 @@ int readAmountOfBytes(void *buffer, int socketDescriptor, int amountOfBytes) {
     int totalReadBytes = 0, bytesToRead, partialReadBytes;
     while ((bytesToRead = amountOfBytes - totalReadBytes) != 0) {
         partialReadBytes = read(socketDescriptor, (buffer + totalReadBytes), bytesToRead);
-        if (partialReadBytes <= 0) {
-            return 0;
+        if (partialReadBytes < 0) {
+            perror("Error reading socket");
         }
         totalReadBytes += partialReadBytes;
     }
