@@ -21,8 +21,6 @@
 #define FILENAME_LENGTH 64
 
 typedef struct package {
-    int command;
-    int totalSize;
     int index;
     int dataSize;
     char data[PACKAGE_SIZE];
@@ -39,7 +37,8 @@ void* processConnection(void* clientSocket);
 void initializeMainSocket(int *serverfd, struct sockaddr_in *address);
 void handleNewRequest(int mainSocket, struct sockaddr_in address);
 int sendFile(FILE *fileDescriptor, int socketDescriptor, char filename[]);
-int receiveFile(int socketDescriptor, PACKAGE firstPackage);
+int sendExit(int socketDescriptor);
+int receiveFile(int socketDescriptor, COMMAND_PACKAGE command);
 int receiveCommandPackage(COMMAND_PACKAGE *commandPackage, int socketDescriptor);
 int receivePackage(PACKAGE *package, int socketDescriptor);
 int writePackage(PACKAGE package, FILE *file);

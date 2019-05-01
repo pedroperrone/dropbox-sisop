@@ -69,7 +69,8 @@ int main(int argc, char *argv[])
     }
     sendFile(file, sockfd, argv[3]);
 
-    sleep(5);
+    sendExit(sockfd);
+    sleep(1);
 
     close(sockfd);
     return 0;
