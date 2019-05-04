@@ -9,7 +9,14 @@
 #include "../include/connection.h"
 #include "../include/user.h"
 
+//colocar as constantes num util.h mais além
 #define PORT 4000
+#define FALSE 0
+#define TRUE 1
+
+#define MAXNAME 25
+#define MAXFILES 50
+#define MAXPATH MAXFILES*MAXNAME
 
 int main(int argc, char *argv[])
 {
@@ -76,4 +83,54 @@ int main(int argc, char *argv[])
     // close(sockfd);
 
     return 0;
+}
+
+void cli(){
+    char *command;
+    char *commandLine[MAXPATH];
+    char *pathOrFilename;
+    int done = FALSE;
+
+    while(done != TRUE){
+
+        printf("\n Waiting commands\n");
+
+        if(fgets(commandLine,sizeof(commandLine),stdin)!= NULL){
+          commandLine[strcspn(commandLine, "\r\n")] = 0;
+          command = strtok(commandLine, " ");
+          pathOrFilename = strtok(NULL, " ");
+
+          if(strcmp(command, "upload") == 0){
+            //sendFile(fileDescriptor, socketDescriptor, pathOrFilename);
+            printf("upload: %s\n", pathOrFilename); //debug
+          }
+          else if(strcmp(command, "download") == 0){
+            //getfile
+            printf("download: %s\n", pathOrFilename); //debug
+          }
+          else if(strcmp(command, "list_server") == 0){
+            //listServer();
+            printf("list server");// debug
+          }
+          else if(strcmp(command, "list_client") == 0){
+            //listClient();
+            printf("list client");// debug
+          }
+          else if(strcmp(command, "get_sync_dir") == 0){
+            //getSyncDir();
+            printf("get sync dir");// debug
+          }
+          else if(strcmp(command, "delete") == 0){
+            //deleteFile();
+            printf("delete %s\n", pathOrFilename);
+          }
+          else if(strcmp(command, "exit") == 0){
+            //done = TRUE;
+            printf("adeus");
+          }
+
+        }else
+          printf("\n ERROR");
+    }
+
 }
