@@ -16,11 +16,13 @@ typedef struct user {
 int initializeUsersList();
 int createSession(char username[], int socketDescriptor);
 int userHasFreeSession(USER user);
+int allSessionsAreFree(USER user);
 void setSession(USER *user, int socketDescriptor);
 USER *findUserFromSocket(int socketDescriptor);
 int socketBelongsToUser(USER user, int socketDescriptor);
 void *findUser(char username[]);
 void printUsers();
 void removeUserSession(int socketDescriptor);
+void removeSessionWithSocket(USER *user, int socketDescriptor);
 
 #endif
