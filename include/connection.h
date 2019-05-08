@@ -47,5 +47,6 @@ int writePackage(PACKAGE package, FILE *file);
 int calculateFileSize(FILE *fileDescriptor);
 int readAmountOfBytes(void *buffer, int socketDescriptor, int amountOfBytes);
 int getUsernameFromNewConnection(int newSocket, char username[]);
+void destroySession(int socketDescriptor);
 
 #endif
