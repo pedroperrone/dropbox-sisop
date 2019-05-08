@@ -61,7 +61,14 @@ void cli(int socketDescriptor) {
         } else if(strcmp(command, "exit") == 0){
             break;
         } else {
-            printf("Invalid command\n");
+            printf("Available commands:\n");
+            printf("  upload <path/filename.ext>\n");
+            printf("  download <filename.ext>\n");
+            printf("  delete <filename.ext>\n");
+            printf("  list_server\n");
+            printf("  list_client\n");
+            printf("  get_sync_dir\n");
+            printf("  exit\n");
         }
     }
 }
