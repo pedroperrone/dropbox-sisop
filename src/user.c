@@ -32,6 +32,10 @@ int userHasFreeSession(USER user) {
     return user.sessionOne == 0 || user.sessionTwo == 0;
 }
 
+int allSessionsAreFree(USER user) {
+    return user.sessionOne == 0 && user.sessionTwo == 0;
+}
+
 void setSession(USER* user, int socketDescriptor) {
     if(user->sessionOne == 0) {
         user->sessionOne = socketDescriptor;
@@ -96,6 +100,17 @@ void removeUserSession(int socketDescriptor) {
     if(user == NULL) {
         return;
     }
-    removeFromList(user, usersList);
-    free(user);
+    removeSessionWithSocket(user, socketDescriptor);
+    if(allSessionsAreFree(*user)) {
+        removeFromList(user, usersList);
+        free(user);
+    }
+}
+
+void removeSessionWithSocket(USER *user, int socketDescriptor) {
+    if(user->sessionOne == socketDescriptor) {
+        user->sessionOne = 0;
+    } else if(user->sessionTwo == socketDescriptor) {
+        user->sessionTwo = 0;
+    }
 }
