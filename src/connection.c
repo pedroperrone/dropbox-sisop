@@ -79,8 +79,13 @@ void* processConnection(void *clientSocket) {
             break;
         }
     } while (commandPackage.command != EXIT);
-    close(socket);
+    destroySession(socket);
     return NULL;
+}
+
+void destroySession(int socketDescriptor) {
+    removeUserSession(socketDescriptor);
+    close(socketDescriptor);
 }
 
 int sendFile(FILE *fileDescriptor, int socketDescriptor, char filename[]) {

@@ -90,3 +90,12 @@ void *findUser(char username[]) {
     }
     return NULL;
 }
+
+void removeUserSession(int socketDescriptor) {
+    USER *user = findUserFromSocket(socketDescriptor);
+    if(user == NULL) {
+        return;
+    }
+    removeFromList(user, usersList);
+    free(user);
+}
