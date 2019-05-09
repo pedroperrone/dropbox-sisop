@@ -32,7 +32,14 @@ typedef struct command_package {
     char filename[FILENAME_LENGTH];
 } COMMAND_PACKAGE;
 
+typedef enum socket_type {
+    REQUEST,
+    NOTIFY_CLIENT,
+    NOTIFY_SERVER
+} SOCKET_TYPE;
+
 void setPort(int portValue);
+int createSocket(SOCKET_TYPE type, char *hostname, char *username, int port);
 void* processConnection(void* clientSocket);
 void initializeMainSocket(int *serverfd, struct sockaddr_in *address);
 void handleNewRequest(int mainSocket);

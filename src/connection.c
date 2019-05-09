@@ -10,6 +10,38 @@ void setPort(int portValue) {
     port = portValue;
 }
 
+int createSocket(SOCKET_TYPE type, char *hostname, char *username, int port) {
+    int sockfd;
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+
+    server = gethostbyname(hostname);
+    if (server == NULL) {
+        fprintf(stderr, "ERROR, no such host\n");
+        exit(0);
+    }
+
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+        printf("ERROR opening socket\n");
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(port);
+    serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
+    bzero(&(serv_addr.sin_zero), 8);
+
+    if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+        fprintf(stderr, "ERROR connecting to socket\n");
+        exit(0);
+    }
+
+    if (write(sockfd, username, USERNAME_LENGTH) != USERNAME_LENGTH) {
+        fprintf(stderr, "ERROR writing username to socket\n");
+        exit(0);
+    }
+
+    return sockfd;
+}
+
 void initializeMainSocket(int *serverfd, struct sockaddr_in *address) {
     struct sockaddr_in add;
     // Creating socket file descriptor
