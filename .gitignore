@@ -5,3 +5,6 @@ dropboxClient
 # vagrant files
 .vagrant
 Vagrantfile
+
+#vscode files
+.vscode

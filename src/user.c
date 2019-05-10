@@ -7,7 +7,9 @@ int initializeUsersList() {
     return usersList != NULL;
 }
 
-int createSession(char username[], int socketDescriptor) {
+int createSession(char username[], int socketDescriptor,
+                  SOCKET_TYPE socket_type)
+{
     USER *userPointer;
     userPointer = (USER*) findUser(username);
     if(userPointer == NULL) {
@@ -16,33 +18,44 @@ int createSession(char username[], int socketDescriptor) {
             return -1;
         }
         memcpy(&(userPointer->username), username, USERNAME_LENGTH);
-        userPointer->sessionTwo = 0;
-        userPointer->sessionTwo = 0;
+        for (int i = 0; i < NUM_SESSIONS; i++) {
+            for (int j = 0; j < SOCKETS_PER_SESSION; j++) {
+                userPointer->sockets[i][j] = 0;
+            }
+        }
         add(userPointer, usersList);
     }
-    if(userHasFreeSession(*userPointer)) {
-        setSession(userPointer, socketDescriptor);
+    if(userHasFreeSession(userPointer, socket_type)) {
+        setSession(userPointer, socketDescriptor, socket_type);
         fflush(stdout);
         return 1;
     }
     return 0;
 }
 
-int userHasFreeSession(USER user) {
-    return user.sessionOne == 0 || user.sessionTwo == 0;
-}
-
-int allSessionsAreFree(USER user) {
-    return user.sessionOne == 0 && user.sessionTwo == 0;
-}
-
-void setSession(USER* user, int socketDescriptor) {
-    if(user->sessionOne == 0) {
-        user->sessionOne = socketDescriptor;
-        return;
+int userHasFreeSession(USER *user, SOCKET_TYPE socket_type) {
+    for (int i = 0; i < NUM_SESSIONS; i++) {
+        if (user->sockets[i][socket_type] == 0) return 1;
     }
-    if(user->sessionTwo == 0) {
-        user->sessionTwo = socketDescriptor;
+
+    return 0;
+}
+
+int allSocketsAreFree(USER *user) {
+    for (int i = 0; i < NUM_SESSIONS; i++) {
+        for (int j = 0; j < SOCKETS_PER_SESSION; j++) {
+            if (user->sockets[i][j] != 0) return 0;
+        }
+    }
+
+    return 1;
+}
+
+void setSession(USER* user, int socketDescriptor, SOCKET_TYPE socket_type) {
+    for (int i = 0; i < NUM_SESSIONS; i++) {
+        if (user->sockets[i][socket_type] == 0) {
+            user->sockets[i][socket_type] = socketDescriptor;
+        }
     }
 }
 
@@ -52,8 +65,14 @@ void printUsers() {
     while(current != NULL) {
         userPtr = (USER*) current->data;
         printf("Username: %s\n", userPtr->username);
-        printf("Socket 1: %d\n", userPtr->sessionOne);
-        printf("Socket 2: %d\n\n", userPtr->sessionTwo);
+
+        for (int i = 0; i < NUM_SESSIONS; i++) {
+            printf("Session %d:\n", i);
+            for (int j = 0; j < SOCKETS_PER_SESSION; j++) {
+                printf("  Socket %d: %d\n", j, userPtr->sockets[i][j]);
+            }
+        }
+
         current = current->next;
     }
     printf("FIM DA LISTA DE USERS\n\n");
@@ -67,7 +86,7 @@ USER *findUserFromSocket(int socketDescriptor) {
     }
     while (current != NULL) {
         userPointer = (USER *)current->data;
-        if (socketBelongsToUser(*userPointer, socketDescriptor)) {
+        if (socketBelongsToUser(userPointer, socketDescriptor)) {
             return userPointer;
         }
         current = current->next;
@@ -75,8 +94,14 @@ USER *findUserFromSocket(int socketDescriptor) {
     return NULL;
 }
 
-int socketBelongsToUser(USER user, int socketDescriptor) {
-    return user.sessionOne == socketDescriptor || user.sessionTwo == socketDescriptor;
+int socketBelongsToUser(USER *user, int socketDescriptor) {
+    for (int i = 0; i < NUM_SESSIONS; i++) {
+        for (int j = 0; j < SOCKETS_PER_SESSION; j++) {
+            if (user->sockets[i][j] == socketDescriptor) return 1;
+        }
+    }
+
+    return 0;
 }
 
 void *findUser(char username[]) {
@@ -95,22 +120,24 @@ void *findUser(char username[]) {
     return NULL;
 }
 
-void removeUserSession(int socketDescriptor) {
+void removeUserSocket(int socketDescriptor) {
     USER *user = findUserFromSocket(socketDescriptor);
     if(user == NULL) {
         return;
     }
-    removeSessionWithSocket(user, socketDescriptor);
-    if(allSessionsAreFree(*user)) {
+    removeSocketFromUser(user, socketDescriptor);
+    if(allSocketsAreFree(user)) {
         removeFromList(user, usersList);
         free(user);
     }
 }
 
-void removeSessionWithSocket(USER *user, int socketDescriptor) {
-    if(user->sessionOne == socketDescriptor) {
-        user->sessionOne = 0;
-    } else if(user->sessionTwo == socketDescriptor) {
-        user->sessionTwo = 0;
+void removeSocketFromUser(USER *user, int socketDescriptor) {
+    for (int i = 0; i < NUM_SESSIONS; i++) {
+        for (int j = 0; j < SOCKETS_PER_SESSION; j++) {
+            if (user->sockets[i][j] == socketDescriptor) {
+                user->sockets[i][j] = 0;
+            }
+        }
     }
 }

@@ -4,25 +4,28 @@
 #include <string.h>
 #include <stdio.h>
 #include "../include/linked_list.h"
+#include "../include/dropbox.h"
 
 #define USERNAME_LENGTH 64
+#define NUM_SESSIONS 2
+#define SOCKETS_PER_SESSION 3
 
 typedef struct user {
   char username[USERNAME_LENGTH];
-  int sessionOne;
-  int sessionTwo;
+  int sockets[NUM_SESSIONS][SOCKETS_PER_SESSION];
 } USER;
 
 int initializeUsersList();
-int createSession(char username[], int socketDescriptor);
-int userHasFreeSession(USER user);
-int allSessionsAreFree(USER user);
-void setSession(USER *user, int socketDescriptor);
+int createSession(char username[], int socketDescriptor,
+                  SOCKET_TYPE socket_type);
+int userHasFreeSession(USER *user, SOCKET_TYPE socket_type);
+int allSocketsAreFree(USER *user);
+void setSession(USER *user, int socketDescriptor, SOCKET_TYPE socket_type);
 USER *findUserFromSocket(int socketDescriptor);
-int socketBelongsToUser(USER user, int socketDescriptor);
+int socketBelongsToUser(USER *user, int socketDescriptor);
 void *findUser(char username[]);
 void printUsers();
-void removeUserSession(int socketDescriptor);
-void removeSessionWithSocket(USER *user, int socketDescriptor);
+void removeUserSocket(int socketDescriptor);
+void removeSocketFromUser(USER *user, int socketDescriptor);
 
 #endif

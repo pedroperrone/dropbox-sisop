@@ -18,15 +18,15 @@ int main(int argc, char *argv[]) {
     int port;
 
     if (argc != 4) {
-        fprintf(stderr, "usage %s hostname username port\n", argv[0]);
+        fprintf(stderr, "usage %s username hostname port\n", argv[0]);
         exit(0);
     }
 
-    hostname = argv[1];
-    username = argv[2];
+    username = argv[1];
+    hostname = argv[2];
     port = atoi(argv[3]);
 
-    sockfd = createSocket(REQUEST, hostname, username, port);
+    sockfd = createSocket(REQUEST, username, hostname, port);
 
     if (sockfd < 0) {
         return 1;

@@ -14,6 +14,7 @@
 #include <sys/stat.h>
 #include "../include/user.h"
 #include "../include/command.h"
+#include "../include/dropbox.h"
 
 #define PACKAGE_SIZE 4096
 #define FAILURE_BYTE_MESSAGE 'F'
@@ -32,12 +33,6 @@ typedef struct command_package {
     char filename[FILENAME_LENGTH];
 } COMMAND_PACKAGE;
 
-typedef enum socket_type {
-    REQUEST,
-    NOTIFY_CLIENT,
-    NOTIFY_SERVER
-} SOCKET_TYPE;
-
 void setPort(int portValue);
 int createSocket(SOCKET_TYPE type, char *hostname, char *username, int port);
 void* processConnection(void* clientSocket);
@@ -54,6 +49,7 @@ int writePackage(PACKAGE package, FILE *file);
 int calculateFileSize(FILE *fileDescriptor);
 int readAmountOfBytes(void *buffer, int socketDescriptor, int amountOfBytes);
 int getUsernameFromNewConnection(int newSocket, char username[]);
-void destroySession(int socketDescriptor);
+int getSocketType(int socket);
+void destroyConnection(int socketDescriptor);
 
 #endif
