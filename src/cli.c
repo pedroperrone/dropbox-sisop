@@ -11,12 +11,24 @@ void read_line(char *command, char *argument) {
     sscanf(input, "%s %s", command, argument);
 }
 
-void upload(int socketDescriptor, char *file_name) {
-    FILE *file = fopen(file_name, "r");
-    if(file == NULL) {
-        printf("Error opening file");
+void upload(int socketDescriptor, char *file_path) {
+    FILE *file = fopen(file_path, "r");
+    const char s[2] = "/";
+    char *token, *filename;
+
+    token = strtok(file_path, s);
+   
+    while( token != NULL ) {
+        filename = token;
+        token = strtok(NULL, s);
     }
-    sendFile(file, socketDescriptor, file_name);
+
+    if(file == NULL)
+        printf("Error opening file\n");
+    else {
+        sendFile(file, socketDescriptor, filename);
+        fclose(file);
+    }
 }
 
 void download(int socketDescriptor, char *file_name) {
@@ -43,6 +55,7 @@ void cli(int socketDescriptor) {
     char command[MAX_COMMAND_SIZE];
     char argument[MAX_COMMAND_SIZE];
 
+    sleep(0.1);
     while(TRUE) {
         read_line(command, argument);
 
@@ -60,7 +73,9 @@ void cli(int socketDescriptor) {
             get_sync_dir(socketDescriptor);
         } else if(strcmp(command, "exit") == 0){
             break;
-        } else {
+        } else if(strcmp(command, "") == 0){
+            // pass
+        } else if(strcmp(command, "?") == 0){
             printf("Available commands:\n");
             printf("  upload <path/filename.ext>\n");
             printf("  download <filename.ext>\n");
@@ -69,6 +84,8 @@ void cli(int socketDescriptor) {
             printf("  list_client\n");
             printf("  get_sync_dir\n");
             printf("  exit\n");
+        } else {
+            printf("Invalid command. Type '?' for help.\n");
         }
     }
 }
