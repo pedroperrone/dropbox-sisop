@@ -10,10 +10,62 @@ void setPort(int portValue) {
     port = portValue;
 }
 
+int createSocket(SOCKET_TYPE type, char *username, char *hostname, int port) {
+    int sockfd;
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+    char byte_message;
+    SOCKET_TYPE socket_type;
+
+    server = gethostbyname(hostname);
+    if (server == NULL) {
+        fprintf(stderr, "ERROR, no such host\n");
+        exit(1);
+    }
+
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+        printf("ERROR opening socket\n");
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(port);
+    serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
+    bzero(&(serv_addr.sin_zero), 8);
+
+    if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+        fprintf(stderr, "ERROR connecting to socket\n");
+        exit(1);
+    }
+
+    if (write(sockfd, username, USERNAME_LENGTH) != USERNAME_LENGTH) {
+        fprintf(stderr, "ERROR writing username to socket\n");
+        exit(1);
+    }
+
+    socket_type = REQUEST;
+    if (write(sockfd, &socket_type, sizeof (SOCKET_TYPE))
+        != sizeof (SOCKET_TYPE))
+    {
+        fprintf(stderr, "ERROR writing socket type to socket\n");
+        exit(1);
+    }
+
+    if (read(sockfd, &byte_message, 1) != 1) {
+        fprintf(stderr, "ERROR reading from socket\n");
+        exit(1);
+    }
+
+    if (byte_message != SUCCESS_BYTE_MESSAGE) {
+        fprintf(stderr, "ERROR establishing a new session\n");
+        exit(1);
+    }
+
+    return sockfd;
+}
+
 void initializeMainSocket(int *serverfd, struct sockaddr_in *address) {
     struct sockaddr_in add;
     // Creating socket file descriptor
-    if ((*serverfd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+    if ((*serverfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
         perror("socket failed");
         exit(EXIT_FAILURE);
     }
@@ -40,15 +92,35 @@ void handleNewRequest(int mainSocket) {
     pthread_t deamonThread;
     struct sockaddr_in cliendAddress;
     char username[USERNAME_LENGTH];
+    SOCKET_TYPE socket_type;
+
+    // Array of pointers to functions that receive (void *) and return (void *).
+    void *(*processConnection[])(void *) = {
+        processConnection_REQUEST,
+        processConnection_NOTIFY_CLIENT,
+        processConnection_NOTIFY_SERVER
+    };
+
+    addrlen = sizeof (struct sockaddr_in);
+    
     if ((new_socket = accept(mainSocket, (struct sockaddr *)&cliendAddress, (socklen_t *)&addrlen)) < 0) {
         perror("accept");
         exit(EXIT_FAILURE);
     }
     newSocketPointer = (int *)malloc(sizeof(int));
-    if(getUsernameFromNewConnection(new_socket, username) == 0) {
+    if(getUsernameFromNewConnection(new_socket, username) != 0) {
         perror("Error receiving username");
+        exit(EXIT_FAILURE);
     }
-    if (createSession(username, new_socket) != 1) {
+
+    socket_type = getSocketType(new_socket);
+
+    if (socket_type < 0) {
+        perror("Error receiving socket type");
+        exit(EXIT_FAILURE);
+    }
+
+    if (createSession(username, new_socket, socket_type) != 1) {
         write(new_socket, failureByteMessage, 1);
         close(new_socket);
         return;
@@ -56,14 +128,27 @@ void handleNewRequest(int mainSocket) {
     // printUsers();
     write(new_socket, successByteMessage, 1);
     memcpy(newSocketPointer, &new_socket, sizeof(int));
-    pthread_create(&deamonThread, NULL, processConnection, (void *)newSocketPointer);
+    pthread_create(&deamonThread, NULL, processConnection[socket_type],
+                   (void *)newSocketPointer);
 }
 
 int getUsernameFromNewConnection(int newSocket, char username[]) {
     return readAmountOfBytes(username, newSocket, USERNAME_LENGTH);
 }
 
-void* processConnection(void *clientSocket) {
+int getSocketType(int socket) {
+    SOCKET_TYPE socket_type;
+
+    if (readAmountOfBytes(&socket_type, socket, sizeof(SOCKET_TYPE)) != 0) {
+        return -1;
+    }
+
+    return socket_type;
+}
+
+void* processConnection_REQUEST(void *clientSocket) {
+    // Código provisório para manter a funcionalidade implementada até agora.
+    // O REQUEST atende requisições de download, list_server e get_sync_dir.
     int socket = *(int *) clientSocket;
     COMMAND_PACKAGE commandPackage;
     do {
@@ -79,12 +164,35 @@ void* processConnection(void *clientSocket) {
             break;
         }
     } while (commandPackage.command != EXIT);
-    destroySession(socket);
+    destroyConnection(socket);
     return NULL;
 }
 
-void destroySession(int socketDescriptor) {
-    removeUserSession(socketDescriptor);
+void* processConnection_NOTIFY_CLIENT(void *clientSocket) {
+    // O NOTIFY_CLIENT notifica o cliente sobre criação, atualização e exclusão
+    // de arquivos.
+    int socket = *(int *) clientSocket;
+
+    // TODO
+
+    destroyConnection(socket);
+    return NULL;
+}
+
+void* processConnection_NOTIFY_SERVER(void *clientSocket) {
+    // O NOTIFY_SERVER recebe notificações do cliente sobre criação, 
+    // atualização e exclusão de arquivos.
+    int socket = *(int *) clientSocket;
+    
+    // TODO: receber notificação do cliente e comunicar às threads do 
+    // tipo NOTIFY_CLIENT.
+
+    destroyConnection(socket);
+    return NULL;
+}
+
+void destroyConnection(int socketDescriptor) {
+    removeUserSocket(socketDescriptor);
     close(socketDescriptor);
 }
 
@@ -155,7 +263,7 @@ int receiveFile(int socketDescriptor, COMMAND_PACKAGE command) {
 
     do {
         bzero(&(package), sizeof(PACKAGE));
-        if (receivePackage(&package, socketDescriptor) == 0) {
+        if (receivePackage(&package, socketDescriptor) != 0) {
             fclose(receivedFile);
             return 0;
         }
@@ -195,10 +303,11 @@ int readAmountOfBytes(void *buffer, int socketDescriptor, int amountOfBytes) {
         partialReadBytes = read(socketDescriptor, (buffer + totalReadBytes), bytesToRead);
         if (partialReadBytes < 0) {
             perror("Error reading socket");
+            return 1;
         }
         totalReadBytes += partialReadBytes;
     }
-    return 1;
+    return 0;
 }
 
 int writePackage(PACKAGE package, FILE *file) {
