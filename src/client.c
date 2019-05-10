@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
     int port;
 
     if (argc != 4) {
-        fprintf(stderr, "usage %s username hostname port\n", argv[0]);
+        fprintf(stderr, "Usage: %s username hostname port\n", argv[0]);
         exit(0);
     }
 

@@ -35,7 +35,9 @@ typedef struct command_package {
 
 void setPort(int portValue);
 int createSocket(SOCKET_TYPE type, char *hostname, char *username, int port);
-void* processConnection(void* clientSocket);
+void* processConnection_REQUEST(void *clientSocket);
+void* processConnection_NOTIFY_CLIENT(void *clientSocket);
+void* processConnection_NOTIFY_SERVER(void *clientSocket);
 void initializeMainSocket(int *serverfd, struct sockaddr_in *address);
 void handleNewRequest(int mainSocket);
 int sendFile(FILE *fileDescriptor, int socketDescriptor, char filename[]);

@@ -94,6 +94,13 @@ void handleNewRequest(int mainSocket) {
     char username[USERNAME_LENGTH];
     SOCKET_TYPE socket_type;
 
+    // Array of pointers to functions that receive (void *) and return (void *).
+    void *(*processConnection[])(void *) = {
+        processConnection_REQUEST,
+        processConnection_NOTIFY_CLIENT,
+        processConnection_NOTIFY_SERVER
+    };
+
     addrlen = sizeof (struct sockaddr_in);
     
     if ((new_socket = accept(mainSocket, (struct sockaddr *)&cliendAddress, (socklen_t *)&addrlen)) < 0) {
@@ -121,7 +128,8 @@ void handleNewRequest(int mainSocket) {
     // printUsers();
     write(new_socket, successByteMessage, 1);
     memcpy(newSocketPointer, &new_socket, sizeof(int));
-    pthread_create(&deamonThread, NULL, processConnection, (void *)newSocketPointer);
+    pthread_create(&deamonThread, NULL, processConnection[socket_type],
+                   (void *)newSocketPointer);
 }
 
 int getUsernameFromNewConnection(int newSocket, char username[]) {
@@ -138,7 +146,9 @@ int getSocketType(int socket) {
     return socket_type;
 }
 
-void* processConnection(void *clientSocket) {
+void* processConnection_REQUEST(void *clientSocket) {
+    // Código provisório para manter a funcionalidade implementada até agora.
+    // O REQUEST atende requisições de download, list_server e get_sync_dir.
     int socket = *(int *) clientSocket;
     COMMAND_PACKAGE commandPackage;
     do {
@@ -154,6 +164,29 @@ void* processConnection(void *clientSocket) {
             break;
         }
     } while (commandPackage.command != EXIT);
+    destroyConnection(socket);
+    return NULL;
+}
+
+void* processConnection_NOTIFY_CLIENT(void *clientSocket) {
+    // O NOTIFY_CLIENT notifica o cliente sobre criação, atualização e exclusão
+    // de arquivos.
+    int socket = *(int *) clientSocket;
+
+    // TODO
+
+    destroyConnection(socket);
+    return NULL;
+}
+
+void* processConnection_NOTIFY_SERVER(void *clientSocket) {
+    // O NOTIFY_SERVER recebe notificações do cliente sobre criação, 
+    // atualização e exclusão de arquivos.
+    int socket = *(int *) clientSocket;
+    
+    // TODO: receber notificação do cliente e comunicar às threads do 
+    // tipo NOTIFY_CLIENT.
+
     destroyConnection(socket);
     return NULL;
 }
