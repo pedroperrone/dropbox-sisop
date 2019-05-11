@@ -426,35 +426,29 @@ int listServer(int socketDescriptor) {
     return 1;
 }
 
-void sendListServer(int socketDescriptor) {
+LIST* getListServer(int socketDescriptor) {
     COMMAND_PACKAGE commandPackage;
     PACKAGE package;
-    FILE_INFO fileInfo;
+    FILE_INFO *fileInfo;
+    LIST *filesInfo = createList();
     commandPackage.command = LIST_SERVER;
-    struct stat fileStat;
     int i = 0;
-    char dateString[DATE_STRING_LENTH];
     if (write(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
         perror("Error on sending command for request list server");
     }
     receiveCommandPackage(&commandPackage, socketDescriptor);
-    printf("Created at\t\t\tModified at\t\t\tAccesses at\t\t\tFile Name\n");
     while(i < commandPackage.dataPackagesAmount) {
         receivePackage(&package, socketDescriptor);
-        memcpy(&fileInfo, &(package.data), package.dataSize);
-        memcpy(&fileStat, &(fileInfo.details), sizeof(struct stat));
-        strncpy(dateString, ctime(&(fileStat.st_ctime)), DATE_STRING_LENTH);
-        dateString[strlen(dateString) - 1] = '\0';
-        printf("%s\t", dateString);
-        strncpy(dateString, ctime(&(fileStat.st_mtime)), DATE_STRING_LENTH);
-        dateString[strlen(dateString) - 1] = '\0';
-        printf("%s\t", dateString);
-        strncpy(dateString, ctime(&(fileStat.st_atime)), DATE_STRING_LENTH);
-        dateString[strlen(dateString) - 1] = '\0';
-        printf("%s\t", dateString);
-        printf("%s\n", fileInfo.filename);
+        fileInfo = (FILE_INFO*) malloc(sizeof(FILE_INFO));
+        if(fileInfo == NULL) {
+            perror("Error allocating memory on getListServer");
+            return NULL;
+        }
+        memcpy(fileInfo, &(package.data), package.dataSize);
+        add(fileInfo, filesInfo);
         i++;
     }
+    return filesInfo;
 }
 
 int receiveCommandPackage(COMMAND_PACKAGE *commandPackage, int socketDescriptor) {
