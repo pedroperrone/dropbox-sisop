@@ -267,7 +267,6 @@ int receiveFile(int socketDescriptor, COMMAND_PACKAGE command) {
     if ((receivedFile = fopen(filename, "w")) == NULL) {
         return 0;
     }
-    fflush(stdout);
 
     do {
         bzero(&(package), sizeof(PACKAGE));
@@ -279,7 +278,7 @@ int receiveFile(int socketDescriptor, COMMAND_PACKAGE command) {
             fclose(receivedFile);
             return 0;
         }
-    } while (package.index != command.dataPackagesAmount);
+    } while (package.index < command.dataPackagesAmount);
     fclose(receivedFile);
     return 1;
 }
