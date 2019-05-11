@@ -3,7 +3,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <linux/inotify.h>
 #include "../include/connection.h"
 
 #define MAX_COMMAND_SIZE 100

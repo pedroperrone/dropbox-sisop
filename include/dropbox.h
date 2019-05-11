@@ -4,7 +4,8 @@
 typedef enum socket_type {
     REQUEST,
     NOTIFY_CLIENT,
-    NOTIFY_SERVER
+    NOTIFY_SERVER,
+    NUMBER_OF_SOCKET_TYPES
 } SOCKET_TYPE;
 
 #endif // DROPBOX_H

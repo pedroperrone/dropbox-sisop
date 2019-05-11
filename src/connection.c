@@ -15,7 +15,6 @@ int createSocket(SOCKET_TYPE type, char *username, char *hostname, int port) {
     struct sockaddr_in serv_addr;
     struct hostent *server;
     char byte_message;
-    SOCKET_TYPE socket_type;
 
     server = gethostbyname(hostname);
     if (server == NULL) {
@@ -41,8 +40,7 @@ int createSocket(SOCKET_TYPE type, char *username, char *hostname, int port) {
         exit(1);
     }
 
-    socket_type = REQUEST;
-    if (write(sockfd, &socket_type, sizeof (SOCKET_TYPE))
+    if (write(sockfd, &type, sizeof (SOCKET_TYPE))
         != sizeof (SOCKET_TYPE))
     {
         fprintf(stderr, "ERROR writing socket type to socket\n");
@@ -183,10 +181,19 @@ void* processConnection_NOTIFY_SERVER(void *clientSocket) {
     // O NOTIFY_SERVER recebe notificações do cliente sobre criação, 
     // atualização e exclusão de arquivos.
     int socket = *(int *) clientSocket;
-    
-    // TODO: receber notificação do cliente e comunicar às threads do 
-    // tipo NOTIFY_CLIENT.
-
+    COMMAND_PACKAGE commandPackage;
+    do {
+        receiveCommandPackage(&commandPackage, socket);
+        switch (commandPackage.command) {
+        case UPLOAD:
+            receiveFile(socket, commandPackage);
+            break;
+        case DELETE:
+            deleteFile(socket, commandPackage);
+        default:
+            break;
+        }
+    } while (commandPackage.command != EXIT);
     destroyConnection(socket);
     return NULL;
 }

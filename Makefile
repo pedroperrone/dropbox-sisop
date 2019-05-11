@@ -16,14 +16,17 @@ server.o: $(SRC_DIR)/server.c
 connection.o: $(SRC_DIR)/connection.c user.o
 	$(CC) -c -o $(BIN_DIR)/connection.o $(SRC_DIR)/connection.c $(FLAGS)
 
-client: client.o connection.o cli.o
-	$(CC) -o dropboxClient $(BIN_DIR)/client.o $(BIN_DIR)/connection.o  $(BIN_DIR)/user.o $(BIN_DIR)/linked_list.o $(BIN_DIR)/cli.o $(FLAGS)
+client: client.o connection.o cli.o synchronization.o
+	$(CC) -o dropboxClient $(BIN_DIR)/client.o $(BIN_DIR)/connection.o  $(BIN_DIR)/user.o $(BIN_DIR)/linked_list.o $(BIN_DIR)/cli.o $(BIN_DIR)/synchronization.o $(FLAGS)
 
 client.o: $(SRC_DIR)/client.c
 	$(CC) -c -o $(BIN_DIR)/client.o $(SRC_DIR)/client.c $(FLAGS)
 
 cli.o: $(SRC_DIR)/cli.c
 	$(CC) -c -o $(BIN_DIR)/cli.o $(SRC_DIR)/cli.c $(FLAGS)
+
+synchronization.o: $(SRC_DIR)/synchronization.c
+	$(CC) -c -o $(BIN_DIR)/synchronization.o $(SRC_DIR)/synchronization.c $(FLAGS)
 
 user.o: $(SRC_DIR)/user.c linked_list.o
 	$(CC) -c -o $(BIN_DIR)/user.o $(SRC_DIR)/user.c $(FLAGS)
