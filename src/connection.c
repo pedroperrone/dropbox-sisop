@@ -346,14 +346,24 @@ void sendListServer(int socketDescriptor) {
     commandPackage.command = LIST_SERVER;
     struct stat fileStat;
     int i = 0;
+    char dateString[DATE_STRING_LENTH];
     if (write(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
         perror("Error on sending command for request list server");
     }
     receiveCommandPackage(&commandPackage, socketDescriptor);
+    printf("Created at\t\t\tModified at\t\t\tAccesses at\n");
     while(i < commandPackage.dataPackagesAmount) {
         receivePackage(&package, socketDescriptor);
         memcpy(&fileStat, &(package.data), sizeof(struct stat));
-        printf("%s\t\t%s\t\t%s\n", ctime(&(fileStat.st_mtime)), ctime(&(fileStat.st_atime)), ctime((&fileStat.st_ctime)));
+        strncpy(dateString, ctime(&(fileStat.st_ctime)), DATE_STRING_LENTH);
+        dateString[strlen(dateString) - 1] = '\0';
+        printf("%s\t", dateString);
+        strncpy(dateString, ctime(&(fileStat.st_mtime)), DATE_STRING_LENTH);
+        dateString[strlen(dateString) - 1] = '\0';
+        printf("%s\t", dateString);
+        strncpy(dateString, ctime(&(fileStat.st_atime)), DATE_STRING_LENTH);
+        dateString[strlen(dateString) - 1] = '\0';
+        printf("%s\n", dateString);
         i++;
     }
 }

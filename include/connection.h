@@ -21,6 +21,7 @@
 #define FAILURE_BYTE_MESSAGE 'F'
 #define SUCCESS_BYTE_MESSAGE 'S'
 #define FILENAME_LENGTH 64
+#define DATE_STRING_LENTH 30
 
 typedef struct package {
     int index;
