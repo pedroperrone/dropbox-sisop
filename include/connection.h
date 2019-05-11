@@ -12,6 +12,7 @@
 #include <pthread.h>
 #include <math.h>
 #include <sys/stat.h>
+#include <dirent.h>
 #include "../include/user.h"
 #include "../include/command.h"
 #include "../include/dropbox.h"
@@ -20,6 +21,7 @@
 #define FAILURE_BYTE_MESSAGE 'F'
 #define SUCCESS_BYTE_MESSAGE 'S'
 #define FILENAME_LENGTH 64
+#define DATE_STRING_LENTH 30
 
 typedef struct package {
     int index;
@@ -32,6 +34,11 @@ typedef struct command_package {
     int dataPackagesAmount;
     char filename[FILENAME_LENGTH];
 } COMMAND_PACKAGE;
+
+typedef struct file_info {
+    char filename[FILENAME_LENGTH];
+    struct stat details;
+} FILE_INFO;
 
 void setPort(int portValue);
 int createSocket(SOCKET_TYPE type, char *hostname, char *username, int port);
@@ -53,5 +60,7 @@ int readAmountOfBytes(void *buffer, int socketDescriptor, int amountOfBytes);
 int getUsernameFromNewConnection(int newSocket, char username[]);
 int getSocketType(int socket);
 void destroyConnection(int socketDescriptor);
+int listServer(int socketDescriptor);
+void sendListServer(int socketDescriptor);
 
 #endif

@@ -40,9 +40,7 @@ int createSocket(SOCKET_TYPE type, char *username, char *hostname, int port) {
         exit(1);
     }
 
-    if (write(sockfd, &type, sizeof (SOCKET_TYPE))
-        != sizeof (SOCKET_TYPE))
-    {
+    if (write(sockfd, &type, sizeof(SOCKET_TYPE)) != sizeof(SOCKET_TYPE)) {
         fprintf(stderr, "ERROR writing socket type to socket\n");
         exit(1);
     }
@@ -157,6 +155,9 @@ void* processConnection_REQUEST(void *clientSocket) {
             break;
         case DELETE:
             deleteFile(socket, commandPackage);
+            break;
+        case LIST_SERVER:
+            listServer(socket);
 
         default:
             break;
@@ -230,7 +231,7 @@ int sendFile(FILE *fileDescriptor, int socketDescriptor, char filename[]) {
 int sendExit(int socketDescriptor) {
     COMMAND_PACKAGE commandPackage;
     commandPackage.command = EXIT;
-    if (write(socketDescriptor, &commandPackage, sizeof(PACKAGE)) < sizeof(PACKAGE)) {
+    if (write(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
         perror("Error on sending data");
         return 0;
     }
@@ -241,7 +242,7 @@ int sendRemove(int socketDescriptor, char filename[]) {
     COMMAND_PACKAGE commandPackage;
     commandPackage.command = DELETE;
     strncpy((char*) &(commandPackage.filename), filename, FILENAME_LENGTH);
-    if (write(socketDescriptor, &commandPackage, sizeof(PACKAGE)) < sizeof(PACKAGE)) {
+    if (write(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
         perror("Error on sending data");
         return 0;
     }
@@ -294,6 +295,92 @@ int deleteFile(int socketDescriptor, COMMAND_PACKAGE commandPackage) {
     strcat(filename, "/");
     strncat(filename, (char*) &(commandPackage.filename), FILENAME_LENGTH);
     return remove(filename) == 0;
+}
+
+int listServer(int socketDescriptor) {
+    USER *user;
+    DIR *mydir;
+    struct dirent *myfile;
+    struct stat mystat;
+    char buf[512];
+    PACKAGE package;
+    COMMAND_PACKAGE command;
+    FILE_INFO fileInfo;
+
+    user = findUserFromSocket(socketDescriptor);
+    if (user == NULL){
+        perror("No user with the current socket");
+    }
+
+    package.index = 1;
+    package.dataSize = sizeof(FILE_INFO);
+    command.command = LIST_SERVER;
+    command.dataPackagesAmount = -2; // Not count . and ..
+
+    mydir = opendir((char *) &(user->username));
+    if(mydir == NULL) {
+        command.dataPackagesAmount = 0;
+        if (write(socketDescriptor, &command, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
+            perror("Error on sending command for list server");
+            return 0;
+        }
+        return 1;
+    }
+    while ((myfile = readdir(mydir)) != NULL) {
+        command.dataPackagesAmount++;
+    }
+    rewinddir(mydir);
+    if(write(socketDescriptor, &command, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
+        perror("Error on sending command for list server");
+        return 0;
+    }
+    while ((myfile = readdir(mydir)) != NULL) {
+        if ((strcmp((char *)&(myfile->d_name), ".") != 0) && (strcmp((char *) &(myfile->d_name), "..") != 0)) {
+            strncpy((char*) &(fileInfo.filename), myfile->d_name, FILENAME_LENGTH);
+            sprintf(buf, "%s/%s", user->username, myfile->d_name);
+            stat(buf, &mystat);
+            memcpy(&(fileInfo.details), &mystat, sizeof(struct stat));
+            memcpy(&(package.data), &fileInfo, sizeof(FILE_INFO));
+            fflush(stdout);
+            if(write(socketDescriptor, &(package), sizeof(PACKAGE)) < sizeof(PACKAGE)) {
+                perror("Error on sending data for list server");
+            }
+            package.index++;
+        }
+    }
+    closedir(mydir);
+    return 1;
+}
+
+void sendListServer(int socketDescriptor) {
+    COMMAND_PACKAGE commandPackage;
+    PACKAGE package;
+    FILE_INFO fileInfo;
+    commandPackage.command = LIST_SERVER;
+    struct stat fileStat;
+    int i = 0;
+    char dateString[DATE_STRING_LENTH];
+    if (write(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
+        perror("Error on sending command for request list server");
+    }
+    receiveCommandPackage(&commandPackage, socketDescriptor);
+    printf("Created at\t\t\tModified at\t\t\tAccesses at\t\t\tFile Name\n");
+    while(i < commandPackage.dataPackagesAmount) {
+        receivePackage(&package, socketDescriptor);
+        memcpy(&fileInfo, &(package.data), package.dataSize);
+        memcpy(&fileStat, &(fileInfo.details), sizeof(struct stat));
+        strncpy(dateString, ctime(&(fileStat.st_ctime)), DATE_STRING_LENTH);
+        dateString[strlen(dateString) - 1] = '\0';
+        printf("%s\t", dateString);
+        strncpy(dateString, ctime(&(fileStat.st_mtime)), DATE_STRING_LENTH);
+        dateString[strlen(dateString) - 1] = '\0';
+        printf("%s\t", dateString);
+        strncpy(dateString, ctime(&(fileStat.st_atime)), DATE_STRING_LENTH);
+        dateString[strlen(dateString) - 1] = '\0';
+        printf("%s\t", dateString);
+        printf("%s\n", fileInfo.filename);
+        i++;
+    }
 }
 
 int receiveCommandPackage(COMMAND_PACKAGE *commandPackage, int socketDescriptor) {
