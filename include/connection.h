@@ -35,6 +35,11 @@ typedef struct command_package {
     char filename[FILENAME_LENGTH];
 } COMMAND_PACKAGE;
 
+typedef struct file_info {
+    char filename[FILENAME_LENGTH];
+    struct stat details;
+} FILE_INFO;
+
 void setPort(int portValue);
 int createSocket(SOCKET_TYPE type, char *hostname, char *username, int port);
 void* processConnection_REQUEST(void *clientSocket);
