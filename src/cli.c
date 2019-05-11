@@ -40,7 +40,7 @@ void delete(int socketDescriptor, char *file_name) {
 }
 
 void list_server(int socketDescriptor) {
-    printf("TODO\n");
+    sendListServer(socketDescriptor);
 }
 
 void list_client(int socketDescriptor) {

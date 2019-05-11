@@ -12,6 +12,7 @@
 #include <pthread.h>
 #include <math.h>
 #include <sys/stat.h>
+#include <dirent.h>
 #include "../include/user.h"
 #include "../include/command.h"
 #include "../include/dropbox.h"
@@ -53,5 +54,7 @@ int readAmountOfBytes(void *buffer, int socketDescriptor, int amountOfBytes);
 int getUsernameFromNewConnection(int newSocket, char username[]);
 int getSocketType(int socket);
 void destroyConnection(int socketDescriptor);
+int listServer(int socketDescriptor);
+void sendListServer(int socketDescriptor);
 
 #endif

@@ -5,6 +5,7 @@ enum COMMAND {
   UPLOAD,
   DOWNLOAD,
   DELETE,
+  LIST_SERVER,
   EXIT
 };
 
