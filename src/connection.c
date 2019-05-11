@@ -317,6 +317,14 @@ int listServer(int socketDescriptor) {
     command.dataPackagesAmount = -2; // Not count . and ..
 
     mydir = opendir((char *) &(user->username));
+    if(mydir == NULL) {
+        command.dataPackagesAmount = 0;
+        if (write(socketDescriptor, &command, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
+            perror("Error on sending command for list server");
+            return 0;
+        }
+        return 1;
+    }
     while ((myfile = readdir(mydir)) != NULL) {
         command.dataPackagesAmount++;
     }
