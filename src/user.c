@@ -18,6 +18,7 @@ int createSession(char username[], int socketDescriptor,
             return -1;
         }
         memcpy(&(userPointer->username), username, USERNAME_LENGTH);
+        userPointer->sync_files = createList();
         for (int i = 0; i < NUM_SESSIONS; i++) {
             for (int j = 0; j < SOCKETS_PER_SESSION; j++) {
                 userPointer->sockets[i][j] = 0;
@@ -55,15 +56,18 @@ void setSession(USER* user, int socketDescriptor, SOCKET_TYPE socket_type) {
     for (int i = 0; i < NUM_SESSIONS; i++) {
         if (user->sockets[i][socket_type] == 0) {
             user->sockets[i][socket_type] = socketDescriptor;
+            return;
         }
     }
 }
 
 void printUsers() {
-    NODE *current = usersList->head;
+    NODE *currentUser = usersList->head;
+    NODE *currentSyncFile;
     USER* userPtr;
-    while(current != NULL) {
-        userPtr = (USER*) current->data;
+    SYNC_FILE* syncFilePtr;
+    while(currentUser != NULL) {
+        userPtr = (USER*) currentUser->data;
         printf("Username: %s\n", userPtr->username);
 
         for (int i = 0; i < NUM_SESSIONS; i++) {
@@ -73,7 +77,14 @@ void printUsers() {
             }
         }
 
-        current = current->next;
+        printf("Files to sync:\n");
+        currentSyncFile = userPtr->sync_files->head;
+        while(currentSyncFile != NULL) {
+            syncFilePtr = (SYNC_FILE*) currentSyncFile->data;
+            printf("  %s / %d / %d\n", syncFilePtr->filename, syncFilePtr->sockfd, syncFilePtr->action);
+            currentSyncFile = currentSyncFile->next;
+        }
+        currentUser = currentUser->next;
     }
     printf("FIM DA LISTA DE USERS\n\n");
 }

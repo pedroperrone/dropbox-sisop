@@ -62,5 +62,7 @@ int getSocketType(int socket);
 void destroyConnection(int socketDescriptor);
 int listServer(int socketDescriptor);
 void sendListServer(int socketDescriptor);
+void receiveServerNotification(int socket);
+void enqueueSyncFile(int sockfd, COMMAND_PACKAGE command, int action);
 
 #endif

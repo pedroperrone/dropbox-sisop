@@ -121,7 +121,6 @@ void handleNewRequest(int mainSocket) {
         close(new_socket);
         return;
     }
-    // printUsers();
     write(new_socket, successByteMessage, 1);
     memcpy(newSocketPointer, &new_socket, sizeof(int));
     pthread_create(&deamonThread, NULL, processConnection[socket_type],
@@ -158,7 +157,7 @@ void* processConnection_REQUEST(void *clientSocket) {
             break;
         case LIST_SERVER:
             listServer(socket);
-
+            break;
         default:
             break;
         }
@@ -187,16 +186,41 @@ void* processConnection_NOTIFY_SERVER(void *clientSocket) {
         receiveCommandPackage(&commandPackage, socket);
         switch (commandPackage.command) {
         case UPLOAD:
+            printf("send upload to client\n");
             receiveFile(socket, commandPackage);
+            enqueueSyncFile(socket, commandPackage, UPLOAD);
             break;
         case DELETE:
+            printf("send delete to client\n");
             deleteFile(socket, commandPackage);
+            enqueueSyncFile(socket, commandPackage, DELETE);
+            break;
+        default:
+            break;
+        }
+        // printUsers();
+    } while (commandPackage.command != EXIT);
+    destroyConnection(socket);
+    return NULL;
+}
+
+void receiveServerNotification(int socket) {
+    COMMAND_PACKAGE commandPackage;
+    do {
+        receiveCommandPackage(&commandPackage, socket);
+        switch (commandPackage.command) {
+        case UPLOAD:
+            printf("received upload from server\n");
+            // receiveFile(socket, commandPackage);
+            break;
+        case DELETE:
+            printf("received delete from server\n");
+            // deleteFile(socket, commandPackage);
         default:
             break;
         }
     } while (commandPackage.command != EXIT);
     destroyConnection(socket);
-    return NULL;
 }
 
 void destroyConnection(int socketDescriptor) {
@@ -418,4 +442,15 @@ int calculateFileSize(FILE *fileDescriptor) {
     fileSize = ftell(fileDescriptor);
     fseek(fileDescriptor, 0, SEEK_SET);
     return ceil((float) fileSize / (float) PACKAGE_SIZE);
+}
+
+void enqueueSyncFile(int sockfd, COMMAND_PACKAGE command, int action) {
+    SYNC_FILE *sync =(SYNC_FILE*) malloc(sizeof(SYNC_FILE));
+    USER *user = findUserFromSocket(sockfd);
+
+    sync->sockfd = sockfd;
+    sync->filename = (char*) malloc(sizeof(command.filename));
+    strcpy(sync->filename, command.filename);
+    sync->action = action;
+    add(sync, user->sync_files);
 }

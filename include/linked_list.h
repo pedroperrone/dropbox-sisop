@@ -3,7 +3,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "../include/user.h"
 
 typedef struct node {
   void* data;

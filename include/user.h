@@ -10,9 +10,16 @@
 #define NUM_SESSIONS 2
 #define SOCKETS_PER_SESSION 3
 
+typedef struct sync_file {
+  char *filename;
+  int sockfd;
+  int action;
+} SYNC_FILE;
+
 typedef struct user {
   char username[USERNAME_LENGTH];
   int sockets[NUM_SESSIONS][SOCKETS_PER_SESSION];
+  LIST *sync_files;
 } USER;
 
 int initializeUsersList();
