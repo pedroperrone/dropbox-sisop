@@ -19,7 +19,7 @@ typedef struct sync_file {
 typedef struct user {
   char username[USERNAME_LENGTH];
   int sockets[NUM_SESSIONS][SOCKETS_PER_SESSION];
-  LIST *sync_files;
+  LIST *sync_queue;
 } USER;
 
 int initializeUsersList();

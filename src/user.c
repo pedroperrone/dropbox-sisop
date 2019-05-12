@@ -18,7 +18,7 @@ int createSession(char username[], int socketDescriptor,
             return -1;
         }
         memcpy(&(userPointer->username), username, USERNAME_LENGTH);
-        userPointer->sync_files = createList();
+        userPointer->sync_queue = createList();
         for (int i = 0; i < NUM_SESSIONS; i++) {
             for (int j = 0; j < SOCKETS_PER_SESSION; j++) {
                 userPointer->sockets[i][j] = 0;
@@ -78,7 +78,7 @@ void printUsers() {
         }
 
         printf("Files to sync:\n");
-        currentSyncFile = userPtr->sync_files->head;
+        currentSyncFile = userPtr->sync_queue->head;
         while(currentSyncFile != NULL) {
             syncFilePtr = (SYNC_FILE*) currentSyncFile->data;
             printf("  %s / %d / %d\n", syncFilePtr->filename, syncFilePtr->sockfd, syncFilePtr->action);

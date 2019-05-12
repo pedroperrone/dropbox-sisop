@@ -8,4 +8,9 @@ typedef enum socket_type {
     NUMBER_OF_SOCKET_TYPES
 } SOCKET_TYPE;
 
+typedef enum location {
+    SERVER,
+    CLIENT
+} LOCATION;
+
 #endif // DROPBOX_H
