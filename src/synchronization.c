@@ -7,7 +7,6 @@
 
 LIST *ignore_list = NULL;
 pthread_mutex_t ignore_list_lock;
-int j = 0;
 
 void* handleLocalChanges(void *sockfd) {
     int socket = *(int *) sockfd;
@@ -19,11 +18,6 @@ void* handleLocalChanges(void *sockfd) {
     if(!ignore_list)
         if ((ignore_list = createList()) == NULL)
             perror("Could not create ignore list");
-
-    pthread_mutex_lock(&ignore_list_lock);
-    for (j = 0; j < 10000000; j++);
-    pthread_mutex_unlock(&ignore_list_lock);
-    // printf("%d\n", j);
 
     if ((inotifyfd = inotify_init()) < 0 ) {
         perror("Couldn't initialize inotify");
@@ -66,30 +60,12 @@ void* handleLocalChanges(void *sockfd) {
 }
 
 void* handleRemoteChanges(void *sockfd) {
-    char *filename = NULL;
     int socket = *(int *) sockfd;
 
     if(!ignore_list)
         if ((ignore_list = createList()) == NULL)
             perror("Could not create ignore list");
 
-    pthread_mutex_lock(&ignore_list_lock);
-    // printf("%d\n", j);
-    pthread_mutex_unlock(&ignore_list_lock);
-
-    filename = (char*) malloc(sizeof("teste.txt"));
-    strcpy(filename, "teste.txt");
-    add(filename, ignore_list);
-
-    filename = (char*) malloc(sizeof("teste2.txt"));
-    strcpy(filename, "teste2.txt");
-    add(filename, ignore_list);
-
-    filename = (char*) malloc(sizeof("teste3.txt"));
-    strcpy(filename, "teste3.txt");
-    add(filename, ignore_list);
-
-    print_ignore_list();
     receiveServerNotification(socket);
 
     return NULL;

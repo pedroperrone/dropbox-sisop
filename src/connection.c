@@ -153,12 +153,12 @@ void* processConnection_REQUEST(void *clientSocket) {
         receiveCommandPackage(&commandPackage, socket);
         switch (commandPackage.command) {
         case UPLOAD:
-            printf("Received upload request for file '%s' from REQUEST\n", commandPackage.filename);
+            // printf("Received upload request for file '%s' from REQUEST\n", commandPackage.filename);
             receiveFile(socket, commandPackage, SERVER);
             enqueueSyncFile(-1, commandPackage, UPLOAD, user);
             break;
         case DELETE:
-            printf("Received delete request for file '%s' from REQUEST\n", commandPackage.filename);
+            // printf("Received delete request for file '%s' from REQUEST\n", commandPackage.filename);
             deleteFile(socket, commandPackage, SERVER);
             enqueueSyncFile(-1, commandPackage, DELETE, user);
             break;
@@ -230,12 +230,12 @@ void* processConnection_NOTIFY_SERVER(void *clientSocket) {
         receiveCommandPackage(&commandPackage, socket);
         switch (commandPackage.command) {
         case UPLOAD:
-            printf("Received upload request for file '%s' from INOTIFY\n", commandPackage.filename);
+            // printf("Received upload request for file '%s' from INOTIFY\n", commandPackage.filename);
             receiveFile(socket, commandPackage, SERVER);
             enqueueSyncFile(socket, commandPackage, UPLOAD, user);
             break;
         case DELETE:
-            printf("Received delete request for file '%s' from INOTIFY\n", commandPackage.filename);
+            // printf("Received delete request for file '%s' from INOTIFY\n", commandPackage.filename);
             deleteFile(socket, commandPackage, SERVER);
             enqueueSyncFile(socket, commandPackage, DELETE, user);
             break;
@@ -254,11 +254,11 @@ void receiveServerNotification(int socket) {
         receiveCommandPackage(&commandPackage, socket);
         switch (commandPackage.command) {
         case UPLOAD:
-            printf("received upload from server\n");
+            // printf("received upload from server\n");
             receiveFile(socket, commandPackage, CLIENT);
             break;
         case DELETE:
-            printf("received delete from server\n");
+            // printf("received delete from server\n");
             deleteFile(socket, commandPackage, CLIENT);
         default:
             break;
