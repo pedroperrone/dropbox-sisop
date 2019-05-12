@@ -5,12 +5,19 @@
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define BUF_LEN MAX_EVENTS * (EVENT_SIZE + FILENAME_LEN)
 
+LIST *ignore_list = NULL;
+pthread_mutex_t ignore_list_lock;
+
 void* handleLocalChanges(void *sockfd) {
     int socket = *(int *) sockfd;
     int inotifyfd, watch_dir;
     char buffer[BUF_LEN];
     char path[FILENAME_LEN];
     int i, length;
+
+    if(!ignore_list)
+        if ((ignore_list = createList()) == NULL)
+            perror("Could not create ignore list");
 
     if ((inotifyfd = inotify_init()) < 0 ) {
         perror("Couldn't initialize inotify");
@@ -38,7 +45,7 @@ void* handleLocalChanges(void *sockfd) {
                     // File deleted
                     delete(socket, event->name);
                 }
-                if ( event->mask & IN_MODIFY && !(event->mask & !IN_ISDIR) ) {
+                if ( event->mask & IN_CLOSE_WRITE && !(event->mask & !IN_ISDIR) ) {
                     // File modified
                     upload(socket, path);
                 }
@@ -53,7 +60,24 @@ void* handleLocalChanges(void *sockfd) {
 }
 
 void* handleRemoteChanges(void *sockfd) {
-    printf("TODO: handle remote changes\n");
+    int socket = *(int *) sockfd;
+
+    if(!ignore_list)
+        if ((ignore_list = createList()) == NULL)
+            perror("Could not create ignore list");
+
+    receiveServerNotification(socket);
+
     return NULL;
 }
 
+void print_ignore_list() {
+    NODE *current = ignore_list->head;
+    char* filename;
+    while(current != NULL) {
+        filename = (char*) current->data;
+        printf("Filename: %s\n", filename);
+        current = current->next;
+    }
+    printf("FIM DA LISTA DE FILENAMES\n");
+}

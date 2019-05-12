@@ -50,8 +50,8 @@ void handleNewRequest(int mainSocket);
 int sendFile(FILE *fileDescriptor, int socketDescriptor, char filename[]);
 int sendExit(int socketDescriptor);
 int sendRemove(int socketDescriptor, char filename[]);
-int receiveFile(int socketDescriptor, COMMAND_PACKAGE command);
-int deleteFile(int _socketDescriptor, COMMAND_PACKAGE commandPackage);
+int receiveFile(int socketDescriptor, COMMAND_PACKAGE command, LOCATION location);
+int deleteFile(int _socketDescriptor, COMMAND_PACKAGE commandPackage, LOCATION location);
 int receiveCommandPackage(COMMAND_PACKAGE *commandPackage, int socketDescriptor);
 int receivePackage(PACKAGE *package, int socketDescriptor);
 int writePackage(PACKAGE package, FILE *file);
@@ -62,5 +62,7 @@ int getSocketType(int socket);
 void destroyConnection(int socketDescriptor);
 int listServer(int socketDescriptor);
 void sendListServer(int socketDescriptor);
+void receiveServerNotification(int socket);
+void enqueueSyncFile(int sockfd, COMMAND_PACKAGE command, int action, USER *user);
 
 #endif

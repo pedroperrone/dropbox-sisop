@@ -6,6 +6,8 @@ int port;
 char failureByteMessage[1] = {FAILURE_BYTE_MESSAGE};
 char successByteMessage[1] = {SUCCESS_BYTE_MESSAGE};
 
+pthread_mutex_t sync_queue_lock;
+
 void setPort(int portValue) {
     port = portValue;
 }
@@ -121,7 +123,6 @@ void handleNewRequest(int mainSocket) {
         close(new_socket);
         return;
     }
-    // printUsers();
     write(new_socket, successByteMessage, 1);
     memcpy(newSocketPointer, &new_socket, sizeof(int));
     pthread_create(&deamonThread, NULL, processConnection[socket_type],
@@ -146,19 +147,24 @@ void* processConnection_REQUEST(void *clientSocket) {
     // Código provisório para manter a funcionalidade implementada até agora.
     // O REQUEST atende requisições de download, list_server e get_sync_dir.
     int socket = *(int *) clientSocket;
+    USER *user = findUserFromSocket(socket);
     COMMAND_PACKAGE commandPackage;
     do {
         receiveCommandPackage(&commandPackage, socket);
         switch (commandPackage.command) {
         case UPLOAD:
-            receiveFile(socket, commandPackage);
+            // printf("Received upload request for file '%s' from REQUEST\n", commandPackage.filename);
+            receiveFile(socket, commandPackage, SERVER);
+            enqueueSyncFile(-1, commandPackage, UPLOAD, user);
             break;
         case DELETE:
-            deleteFile(socket, commandPackage);
+            // printf("Received delete request for file '%s' from REQUEST\n", commandPackage.filename);
+            deleteFile(socket, commandPackage, SERVER);
+            enqueueSyncFile(-1, commandPackage, DELETE, user);
             break;
         case LIST_SERVER:
             listServer(socket);
-
+            break;
         default:
             break;
         }
@@ -171,8 +177,44 @@ void* processConnection_NOTIFY_CLIENT(void *clientSocket) {
     // O NOTIFY_CLIENT notifica o cliente sobre criação, atualização e exclusão
     // de arquivos.
     int socket = *(int *) clientSocket;
+    int i;
+    char *file_path = (char*) malloc(FILENAME_LENGTH);
+    NODE *current;
+    FILE *file;
+    USER *user = findUserFromSocket(socket);
+    SYNC_FILE *sync_file;
 
-    // TODO
+
+    while(1) {
+        sleep(2);
+        //printUsers();
+        pthread_mutex_lock(&sync_queue_lock);
+        current = user->sync_queue->head;
+        if(current) {
+            sync_file = current->data;
+            strcpy(file_path, user->username);
+            strcat(file_path, "/");
+            strcat(file_path, sync_file->filename);
+            for(i = 0; i < NUM_SESSIONS; i++){
+                if(user->sockets[i][NOTIFY_SERVER] != sync_file->sockfd &&
+                   user->sockets[i][REQUEST] != sync_file->sockfd) {
+                    if(sync_file->action == UPLOAD) {
+                        if((file = fopen(file_path, "r")) == NULL) {
+                            printf("Error openning file '%s'", file_path);
+                        } else {
+                            sendFile(file, user->sockets[i][NOTIFY_CLIENT], sync_file->filename);
+                            fclose(file);
+                        }
+                    }
+                    else {
+                        sendRemove(user->sockets[i][NOTIFY_CLIENT], sync_file->filename);
+                    }
+                }
+            }
+            removeFromList(sync_file, user->sync_queue);
+        }
+        pthread_mutex_unlock(&sync_queue_lock);
+    }
 
     destroyConnection(socket);
     return NULL;
@@ -182,21 +224,47 @@ void* processConnection_NOTIFY_SERVER(void *clientSocket) {
     // O NOTIFY_SERVER recebe notificações do cliente sobre criação, 
     // atualização e exclusão de arquivos.
     int socket = *(int *) clientSocket;
+    USER *user = findUserFromSocket(socket);
     COMMAND_PACKAGE commandPackage;
     do {
         receiveCommandPackage(&commandPackage, socket);
         switch (commandPackage.command) {
         case UPLOAD:
-            receiveFile(socket, commandPackage);
+            // printf("Received upload request for file '%s' from INOTIFY\n", commandPackage.filename);
+            receiveFile(socket, commandPackage, SERVER);
+            enqueueSyncFile(socket, commandPackage, UPLOAD, user);
             break;
         case DELETE:
-            deleteFile(socket, commandPackage);
+            // printf("Received delete request for file '%s' from INOTIFY\n", commandPackage.filename);
+            deleteFile(socket, commandPackage, SERVER);
+            enqueueSyncFile(socket, commandPackage, DELETE, user);
+            break;
+        default:
+            break;
+        }
+        // printUsers();
+    } while (commandPackage.command != EXIT);
+    destroyConnection(socket);
+    return NULL;
+}
+
+void receiveServerNotification(int socket) {
+    COMMAND_PACKAGE commandPackage;
+    do {
+        receiveCommandPackage(&commandPackage, socket);
+        switch (commandPackage.command) {
+        case UPLOAD:
+            // printf("received upload from server\n");
+            receiveFile(socket, commandPackage, CLIENT);
+            break;
+        case DELETE:
+            // printf("received delete from server\n");
+            deleteFile(socket, commandPackage, CLIENT);
         default:
             break;
         }
     } while (commandPackage.command != EXIT);
     destroyConnection(socket);
-    return NULL;
 }
 
 void destroyConnection(int socketDescriptor) {
@@ -249,19 +317,22 @@ int sendRemove(int socketDescriptor, char filename[]) {
     return 1;
 }
 
-int receiveFile(int socketDescriptor, COMMAND_PACKAGE command) {
+int receiveFile(int socketDescriptor, COMMAND_PACKAGE command, LOCATION location) {
     PACKAGE package;
     FILE *receivedFile;
     USER *user;
     char filename[256];
-    // printUsers();
 
-    user = findUserFromSocket(socketDescriptor);
-    if(user == NULL) {
-        perror("No user with the current socket");
+    if(location == SERVER) {
+        user = findUserFromSocket(socketDescriptor);
+        if(user == NULL) {
+            perror("No user with the current socket");
+        }
+        mkdir(user->username, 0777);
+        strcpy(filename, user->username);
+    } else {
+        strcpy(filename, "sync_dir");
     }
-    mkdir(user->username, 0777);
-    strcpy(filename, user->username);
     strcat(filename, "/");
     strncat(filename, (char*) &(command.filename), FILENAME_LENGTH);
     if ((receivedFile = fopen(filename, "w")) == NULL) {
@@ -283,14 +354,18 @@ int receiveFile(int socketDescriptor, COMMAND_PACKAGE command) {
     return 1;
 }
 
-int deleteFile(int socketDescriptor, COMMAND_PACKAGE commandPackage) {
+int deleteFile(int socketDescriptor, COMMAND_PACKAGE commandPackage, LOCATION location) {
     USER *user;
     char filename[FILENAME_LENGTH];
-    user = findUserFromSocket(socketDescriptor);
-    if (user == NULL) {
-        perror("No user with the current socket");
-    }
-    strncpy(filename, (char*)&(user->username), USERNAME_LENGTH);
+
+    if(location == SERVER) {
+        user = findUserFromSocket(socketDescriptor);
+        if (user == NULL) {
+            perror("No user with the current socket");
+        }
+        strcpy(filename, user->username);
+    } else
+        strcpy(filename, "sync_dir");
     strcat(filename, "/");
     strncat(filename, (char*) &(commandPackage.filename), FILENAME_LENGTH);
     return remove(filename) == 0;
@@ -418,4 +493,16 @@ int calculateFileSize(FILE *fileDescriptor) {
     fileSize = ftell(fileDescriptor);
     fseek(fileDescriptor, 0, SEEK_SET);
     return ceil((float) fileSize / (float) PACKAGE_SIZE);
+}
+
+void enqueueSyncFile(int sockfd, COMMAND_PACKAGE command, int action, USER *user) {
+    pthread_mutex_lock(&sync_queue_lock);
+    SYNC_FILE *sync =(SYNC_FILE*) malloc(sizeof(SYNC_FILE));
+
+    sync->sockfd = sockfd;
+    sync->filename = (char*) malloc(sizeof(command.filename));
+    strcpy(sync->filename, command.filename);
+    sync->action = action;
+    add(sync, user->sync_queue);
+    pthread_mutex_unlock(&sync_queue_lock);
 }

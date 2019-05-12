@@ -13,5 +13,6 @@
 
 void* handleLocalChanges(void *sockfd);
 void* handleRemoteChanges(void *sockfd);
+void print_ignore_list();
 
 #endif
