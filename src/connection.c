@@ -374,23 +374,16 @@ int deleteFile(int socketDescriptor, COMMAND_PACKAGE commandPackage, LOCATION lo
 int listServer(int socketDescriptor) {
     USER *user;
     DIR *mydir;
-    struct dirent *myfile;
-    struct stat mystat;
-    char buf[512];
     PACKAGE package;
     COMMAND_PACKAGE command;
-    FILE_INFO fileInfo;
+    FILE_INFO *fileInfo;
+    LIST *listOfFiles;
+    NODE *current;
 
     user = findUserFromSocket(socketDescriptor);
     if (user == NULL){
         perror("No user with the current socket");
     }
-
-    package.index = 1;
-    package.dataSize = sizeof(FILE_INFO);
-    command.command = LIST_SERVER;
-    command.dataPackagesAmount = -2; // Not count . and ..
-
     mydir = opendir((char *) &(user->username));
     if(mydir == NULL) {
         command.dataPackagesAmount = 0;
@@ -400,30 +393,64 @@ int listServer(int socketDescriptor) {
         }
         return 1;
     }
-    while ((myfile = readdir(mydir)) != NULL) {
-        command.dataPackagesAmount++;
-    }
+    package.index = 1;
+    package.dataSize = sizeof(FILE_INFO);
+    command.command = LIST_SERVER;
+    command.dataPackagesAmount = countNumberOfFiles(mydir);
     rewinddir(mydir);
     if(write(socketDescriptor, &command, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
         perror("Error on sending command for list server");
         return 0;
     }
-    while ((myfile = readdir(mydir)) != NULL) {
-        if ((strcmp((char *)&(myfile->d_name), ".") != 0) && (strcmp((char *) &(myfile->d_name), "..") != 0)) {
-            strncpy((char*) &(fileInfo.filename), myfile->d_name, FILENAME_LENGTH);
-            sprintf(buf, "%s/%s", user->username, myfile->d_name);
-            stat(buf, &mystat);
-            memcpy(&(fileInfo.details), &mystat, sizeof(struct stat));
-            memcpy(&(package.data), &fileInfo, sizeof(FILE_INFO));
-            fflush(stdout);
-            if(write(socketDescriptor, &(package), sizeof(PACKAGE)) < sizeof(PACKAGE)) {
-                perror("Error on sending data for list server");
-            }
-            package.index++;
+    listOfFiles = getListOfFilesInfo(mydir, (char*) &(user->username));
+    current = listOfFiles->head;
+    while(current != NULL) {
+        fileInfo = current->data;
+        memcpy(&(package.data), fileInfo, sizeof(FILE_INFO));
+        if (write(socketDescriptor, &(package), sizeof(PACKAGE)) < sizeof(PACKAGE)) {
+            perror("Error on sending data for list server");
         }
+        package.index++;
+        current = current->next;
     }
+    destroy(listOfFiles);
     closedir(mydir);
     return 1;
+}
+
+int countNumberOfFiles(DIR *dirDescriptor) {
+    int i = -2; // Not count . and ..
+    struct dirent *myfile;
+    rewinddir(dirDescriptor);
+    while((myfile = readdir(dirDescriptor)) != NULL) {
+        i++;
+    }
+    return i;
+}
+
+LIST* getListOfFilesInfo(DIR *dirDescriptor, char username[]) {
+    LIST *listOfFiles = createList();
+    struct dirent *myfile;
+    struct stat mystat;
+    char buf[512];
+    FILE_INFO *fileInfo;
+    if(listOfFiles == NULL) {
+        perror("Error allocating memory on getListOfFiles");
+        return NULL;
+    }
+    rewinddir(dirDescriptor);
+    while ((myfile = readdir(dirDescriptor)) != NULL) {
+        if ((strcmp((char *)&(myfile->d_name), ".") != 0) && (strcmp((char *)&(myfile->d_name), "..") != 0)) {
+            fileInfo = (FILE_INFO*) malloc(sizeof(FILE_INFO));
+            fflush(stdout);
+            strncpy((char *)&(fileInfo->filename), myfile->d_name, FILENAME_LENGTH);
+            sprintf(buf, "%s/%s", username, myfile->d_name);
+            stat(buf, &mystat);
+            fileInfo->details = mystat;
+            add(fileInfo, listOfFiles);
+        }
+    }
+    return listOfFiles;
 }
 
 LIST* getListServer(int socketDescriptor) {

@@ -66,5 +66,7 @@ void sendListServer(int socketDescriptor);
 void receiveServerNotification(int socket);
 void enqueueSyncFile(int sockfd, COMMAND_PACKAGE command, int action, USER *user);
 LIST *getListServer(int socketDescriptor);
+int countNumberOfFiles(DIR *dirDescriptor);
+LIST *getListOfFilesInfo(DIR *dirDescriptor, char username[]);
 
 #endif
