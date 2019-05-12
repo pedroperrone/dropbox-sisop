@@ -17,5 +17,6 @@ void list_server(int socketDescriptor);
 void list_client(int socketDescriptor);
 void get_sync_dir(int socketDescriptor);
 void cli(int socketDescriptor);
+void printListOfFileInfo(LIST *fileInfos);
 
 #endif

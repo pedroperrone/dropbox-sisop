@@ -16,6 +16,7 @@
 #include "../include/user.h"
 #include "../include/command.h"
 #include "../include/dropbox.h"
+#include "../include/linked_list.h"
 
 #define PACKAGE_SIZE 4096
 #define FAILURE_BYTE_MESSAGE 'F'
@@ -64,5 +65,8 @@ int listServer(int socketDescriptor);
 void sendListServer(int socketDescriptor);
 void receiveServerNotification(int socket);
 void enqueueSyncFile(int sockfd, COMMAND_PACKAGE command, int action, USER *user);
+LIST *getListServer(int socketDescriptor);
+int countNumberOfFiles(DIR *dirDescriptor);
+LIST *getListOfFilesInfo(DIR *dirDescriptor, char username[]);
 
 #endif

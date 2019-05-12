@@ -40,11 +40,20 @@ void delete(int socketDescriptor, char *file_name) {
 }
 
 void list_server(int socketDescriptor) {
-    sendListServer(socketDescriptor);
+    LIST *filesInfo = getListServer(socketDescriptor);
+    printListOfFileInfo(filesInfo);
+    destroy(filesInfo);
 }
 
 void list_client(int socketDescriptor) {
-    printf("TODO\n");
+    DIR *syncDir = opendir("sync_dir");
+    LIST *filesInfo;
+    if(syncDir == NULL) {
+        perror("Error opening sync dir");
+    }
+    filesInfo = getListOfFilesInfo(syncDir, "sync_dir");
+    printListOfFileInfo(filesInfo);
+    destroy(filesInfo);
 }
 
 void get_sync_dir(int socketDescriptor) {
@@ -90,3 +99,25 @@ void cli(int socketDescriptor) {
     }
 }
 
+void printListOfFileInfo(LIST *fileInfos) {
+    struct stat fileStat;
+    NODE *current = fileInfos->head;
+    FILE_INFO *fileInfo;
+    char dateString[DATE_STRING_LENTH];
+    printf("Created at\t\t\tModified at\t\t\tAccesses at\t\t\tFile Name\n");
+    while (current != NULL) {
+        fileInfo = (FILE_INFO *)current->data;
+        memcpy(&fileStat, &(fileInfo->details), sizeof(struct stat));
+        strncpy(dateString, ctime(&(fileStat.st_ctime)), DATE_STRING_LENTH);
+        dateString[strlen(dateString) - 1] = '\0';
+        printf("%s\t", dateString);
+        strncpy(dateString, ctime(&(fileStat.st_mtime)), DATE_STRING_LENTH);
+        dateString[strlen(dateString) - 1] = '\0';
+        printf("%s\t", dateString);
+        strncpy(dateString, ctime(&(fileStat.st_atime)), DATE_STRING_LENTH);
+        dateString[strlen(dateString) - 1] = '\0';
+        printf("%s\t", dateString);
+        printf("%s\n", fileInfo->filename);
+        current = current->next;
+    }
+}
