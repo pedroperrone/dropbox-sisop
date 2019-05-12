@@ -46,7 +46,14 @@ void list_server(int socketDescriptor) {
 }
 
 void list_client(int socketDescriptor) {
-    printf("TODO\n");
+    DIR *syncDir = opendir("sync_dir");
+    LIST *filesInfo;
+    if(syncDir == NULL) {
+        perror("Error opening sync dir");
+    }
+    filesInfo = getListOfFilesInfo(syncDir, "sync_dir");
+    printListOfFileInfo(filesInfo);
+    destroy(filesInfo);
 }
 
 void get_sync_dir(int socketDescriptor) {
