@@ -20,6 +20,7 @@ int createSession(char username[], int socketDescriptor,
         memcpy(&(userPointer->username), username, USERNAME_LENGTH);
         userPointer->sync_queue = createList();
         for (int i = 0; i < NUM_SESSIONS; i++) {
+            userPointer->exit[i] = 0;
             for (int j = 0; j < SOCKETS_PER_SESSION; j++) {
                 userPointer->sockets[i][j] = 0;
             }
@@ -148,7 +149,19 @@ void removeSocketFromUser(USER *user, int socketDescriptor) {
         for (int j = 0; j < SOCKETS_PER_SESSION; j++) {
             if (user->sockets[i][j] == socketDescriptor) {
                 user->sockets[i][j] = 0;
+                user->exit[i] = 1;
             }
         }
     }
+}
+
+int getSession(USER *user, int socketDescriptor) {
+    for (int i = 0; i < NUM_SESSIONS; i++) {
+        for (int j = 0; j < SOCKETS_PER_SESSION; j++) {
+            if (user->sockets[i][j] == socketDescriptor) {
+                return i;
+            }
+        }
+    }
+    return -1;
 }

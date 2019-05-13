@@ -19,6 +19,7 @@ typedef struct sync_file {
 typedef struct user {
   char username[USERNAME_LENGTH];
   int sockets[NUM_SESSIONS][SOCKETS_PER_SESSION];
+  int exit[NUM_SESSIONS];
   LIST *sync_queue;
 } USER;
 
@@ -34,5 +35,6 @@ void *findUser(char username[]);
 void printUsers();
 void removeUserSocket(int socketDescriptor);
 void removeSocketFromUser(USER *user, int socketDescriptor);
+int getSession(USER *user, int socketDescriptor);
 
 #endif

@@ -63,7 +63,7 @@ int getSocketType(int socket);
 void destroyConnection(int socketDescriptor);
 int listServer(int socketDescriptor);
 void sendListServer(int socketDescriptor);
-void receiveServerNotification(int socket);
+void receiveServerNotification(int socket, LIST *ignore_list);
 void enqueueSyncFile(int sockfd, COMMAND_PACKAGE command, int action, USER *user);
 LIST *getListServer(int socketDescriptor);
 int countNumberOfFiles(DIR *dirDescriptor);
