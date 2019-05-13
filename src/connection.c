@@ -153,12 +153,10 @@ void* processConnection_REQUEST(void *clientSocket) {
         receiveCommandPackage(&commandPackage, socket);
         switch (commandPackage.command) {
         case UPLOAD:
-            // printf("Received upload request for file '%s' from REQUEST\n", commandPackage.filename);
             receiveFile(socket, commandPackage, SERVER);
             enqueueSyncFile(-1, commandPackage, UPLOAD, user);
             break;
         case DELETE:
-            // printf("Received delete request for file '%s' from REQUEST\n", commandPackage.filename);
             deleteFile(socket, commandPackage, SERVER);
             enqueueSyncFile(-1, commandPackage, DELETE, user);
             break;
@@ -177,17 +175,17 @@ void* processConnection_NOTIFY_CLIENT(void *clientSocket) {
     // O NOTIFY_CLIENT notifica o cliente sobre criação, atualização e exclusão
     // de arquivos.
     int socket = *(int *) clientSocket;
-    int i;
+    int i, session;
     char *file_path = (char*) malloc(FILENAME_LENGTH);
     NODE *current;
     FILE *file;
     USER *user = findUserFromSocket(socket);
     SYNC_FILE *sync_file;
 
+    session = getSession(user, socket);
 
     while(1) {
-        sleep(2);
-        //printUsers();
+        if(user->exit[session]) break;
         pthread_mutex_lock(&sync_queue_lock);
         current = user->sync_queue->head;
         if(current) {
@@ -197,7 +195,10 @@ void* processConnection_NOTIFY_CLIENT(void *clientSocket) {
             strcat(file_path, sync_file->filename);
             for(i = 0; i < NUM_SESSIONS; i++){
                 if(user->sockets[i][NOTIFY_SERVER] != sync_file->sockfd &&
-                   user->sockets[i][REQUEST] != sync_file->sockfd) {
+                   user->sockets[i][NOTIFY_SERVER] != 0 &&
+                   user->sockets[i][REQUEST] != sync_file->sockfd &&
+                   user->sockets[i][REQUEST] != 0)
+                   {
                     if(sync_file->action == UPLOAD) {
                         if((file = fopen(file_path, "r")) == NULL) {
                             printf("Error openning file '%s'", file_path);
@@ -215,8 +216,9 @@ void* processConnection_NOTIFY_CLIENT(void *clientSocket) {
         }
         pthread_mutex_unlock(&sync_queue_lock);
     }
-
-    destroyConnection(socket);
+    sendExit(socket);
+    shutdown(socket, 2);
+    removeUserSocket(socket);
     return NULL;
 }
 
@@ -230,12 +232,10 @@ void* processConnection_NOTIFY_SERVER(void *clientSocket) {
         receiveCommandPackage(&commandPackage, socket);
         switch (commandPackage.command) {
         case UPLOAD:
-            // printf("Received upload request for file '%s' from INOTIFY\n", commandPackage.filename);
             receiveFile(socket, commandPackage, SERVER);
             enqueueSyncFile(socket, commandPackage, UPLOAD, user);
             break;
         case DELETE:
-            // printf("Received delete request for file '%s' from INOTIFY\n", commandPackage.filename);
             deleteFile(socket, commandPackage, SERVER);
             enqueueSyncFile(socket, commandPackage, DELETE, user);
             break;
@@ -248,23 +248,23 @@ void* processConnection_NOTIFY_SERVER(void *clientSocket) {
     return NULL;
 }
 
-void receiveServerNotification(int socket) {
+void receiveServerNotification(int socket, LIST *ignore_list) {
     COMMAND_PACKAGE commandPackage;
     do {
         receiveCommandPackage(&commandPackage, socket);
         switch (commandPackage.command) {
         case UPLOAD:
-            // printf("received upload from server\n");
+            add(commandPackage.filename, ignore_list);
             receiveFile(socket, commandPackage, CLIENT);
             break;
         case DELETE:
-            // printf("received delete from server\n");
+            add(commandPackage.filename, ignore_list);
             deleteFile(socket, commandPackage, CLIENT);
         default:
             break;
         }
     } while (commandPackage.command != EXIT);
-    destroyConnection(socket);
+    close(socket);
 }
 
 void destroyConnection(int socketDescriptor) {

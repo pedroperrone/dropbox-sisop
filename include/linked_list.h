@@ -18,5 +18,6 @@ LIST *createList();
 void add(void* data, LIST *list);
 void removeFromList(void* data, LIST *list);
 void destroy(LIST *list);
+int hasStringElement(char *string, LIST *list);
 
 #endif
