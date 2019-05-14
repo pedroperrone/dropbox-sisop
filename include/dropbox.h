@@ -10,7 +10,8 @@ typedef enum socket_type {
 
 typedef enum location {
     SERVER,
-    CLIENT
+    CLIENT,
+    LOCAL
 } LOCATION;
 
 #endif // DROPBOX_H
