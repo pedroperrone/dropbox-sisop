@@ -66,7 +66,7 @@ void list_client(int socketDescriptor) {
 void get_sync_dir(int socketDescriptor) {
     COMMAND_PACKAGE commandPackage;
 
-    system("rm -r sync_dir");
+    system("rm -rf sync_dir");
     mkdir("sync_dir", 0755);
 
     requestSyncDir(socketDescriptor);

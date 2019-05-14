@@ -1,6 +1,6 @@
 #include "../include/linked_list.h"
 
-pthread_mutex_t list_lock;
+pthread_mutex_t list_lock = PTHREAD_MUTEX_INITIALIZER;
 
 NODE *createNode(void* data) {
     NODE *newNode = malloc(sizeof(NODE));
