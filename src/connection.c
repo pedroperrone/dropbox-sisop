@@ -6,7 +6,7 @@ int port;
 char failureByteMessage[1] = {FAILURE_BYTE_MESSAGE};
 char successByteMessage[1] = {SUCCESS_BYTE_MESSAGE};
 
-pthread_mutex_t sync_queue_lock;
+pthread_mutex_t sync_queue_lock = PTHREAD_MUTEX_INITIALIZER;
 
 void setPort(int portValue) {
     port = portValue;
@@ -472,19 +472,11 @@ int listServer(int socketDescriptor) {
         perror("No user with the current socket");
     }
     mydir = opendir((char *) &(user->username));
-    if(mydir == NULL) {
-        command.dataPackagesAmount = 0;
-        if (write(socketDescriptor, &command, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
-            perror("Error on sending command for list server");
-            return 0;
-        }
-        return 1;
-    }
+
     package.index = 1;
     package.dataSize = sizeof(FILE_INFO);
     command.command = LIST_SERVER;
     command.dataPackagesAmount = countNumberOfFiles(mydir);
-    rewinddir(mydir);
     if(write(socketDescriptor, &command, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
         perror("Error on sending command for list server");
         return 0;
@@ -508,6 +500,9 @@ int listServer(int socketDescriptor) {
 int countNumberOfFiles(DIR *dirDescriptor) {
     int i = -2; // Not count . and ..
     struct dirent *myfile;
+
+    if (dirDescriptor == NULL) return 0;
+
     rewinddir(dirDescriptor);
     while((myfile = readdir(dirDescriptor)) != NULL) {
         i++;
@@ -525,6 +520,9 @@ LIST* getListOfFilesInfo(DIR *dirDescriptor, char username[]) {
         perror("Error allocating memory on getListOfFiles");
         return NULL;
     }
+
+    if (dirDescriptor == NULL) return listOfFiles;
+
     rewinddir(dirDescriptor);
     while ((myfile = readdir(dirDescriptor)) != NULL) {
         if ((strcmp((char *)&(myfile->d_name), ".") != 0) && (strcmp((char *)&(myfile->d_name), "..") != 0)) {

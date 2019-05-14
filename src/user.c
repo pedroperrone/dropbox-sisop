@@ -1,6 +1,7 @@
 #include "../include/user.h"
 
 LIST *usersList;
+pthread_mutex_t removeUserSocket_lock = PTHREAD_MUTEX_INITIALIZER;
 
 int initializeUsersList() {
     usersList = createList();
@@ -137,11 +138,13 @@ void removeUserSocket(int socketDescriptor) {
     if(user == NULL) {
         return;
     }
+    pthread_mutex_lock(&removeUserSocket_lock);
     removeSocketFromUser(user, socketDescriptor);
     if(allSocketsAreFree(user)) {
         removeFromList(user, usersList);
         free(user);
     }
+    pthread_mutex_unlock(&removeUserSocket_lock);
 }
 
 void removeSocketFromUser(USER *user, int socketDescriptor) {

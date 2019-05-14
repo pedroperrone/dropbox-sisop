@@ -6,7 +6,7 @@
 #define BUF_LEN MAX_EVENTS * (EVENT_SIZE + FILENAME_LEN)
 
 LIST *ignore_list = NULL;
-pthread_mutex_t ignore_list_lock;
+pthread_mutex_t ignore_list_lock = PTHREAD_MUTEX_INITIALIZER;
 
 void* handleLocalChanges(void *sockfd) {
     int socket = *(int *) sockfd;
