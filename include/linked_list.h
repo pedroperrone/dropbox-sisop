@@ -12,6 +12,7 @@ typedef struct node {
 
 typedef struct list {
   NODE *head;
+  pthread_mutex_t lock;
 } LIST;
 
 NODE *createNode(void *data);

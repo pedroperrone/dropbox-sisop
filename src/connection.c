@@ -6,8 +6,6 @@ int port;
 char failureByteMessage[1] = {FAILURE_BYTE_MESSAGE};
 char successByteMessage[1] = {SUCCESS_BYTE_MESSAGE};
 
-pthread_mutex_t sync_queue_lock = PTHREAD_MUTEX_INITIALIZER;
-
 void setPort(int portValue) {
     port = portValue;
 }
@@ -192,7 +190,7 @@ void* processConnection_NOTIFY_CLIENT(void *clientSocket) {
 
     while(1) {
         if(user->exit[session]) break;
-        pthread_mutex_lock(&sync_queue_lock);
+        pthread_mutex_lock(&user->sync_queue->lock);
         current = user->sync_queue->head;
         if(current) {
             sync_file = current->data;
@@ -218,9 +216,12 @@ void* processConnection_NOTIFY_CLIENT(void *clientSocket) {
                     }
                 }
             }
+            pthread_mutex_unlock(&user->sync_queue->lock);
             removeFromList(sync_file, user->sync_queue);
         }
-        pthread_mutex_unlock(&sync_queue_lock);
+        else {
+            pthread_mutex_unlock(&user->sync_queue->lock);
+        }
     }
     sendExit(socket);
     shutdown(socket, 2);
@@ -603,7 +604,6 @@ int calculateFileSize(FILE *fileDescriptor) {
 }
 
 void enqueueSyncFile(int sockfd, COMMAND_PACKAGE command, int action, USER *user) {
-    pthread_mutex_lock(&sync_queue_lock);
     SYNC_FILE *sync =(SYNC_FILE*) malloc(sizeof(SYNC_FILE));
 
     sync->sockfd = sockfd;
@@ -611,5 +611,4 @@ void enqueueSyncFile(int sockfd, COMMAND_PACKAGE command, int action, USER *user
     strcpy(sync->filename, command.filename);
     sync->action = action;
     add(sync, user->sync_queue);
-    pthread_mutex_unlock(&sync_queue_lock);
 }
