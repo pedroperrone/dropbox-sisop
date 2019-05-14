@@ -32,7 +32,14 @@ void upload(int socketDescriptor, char *file_path) {
 }
 
 void download(int socketDescriptor, char *file_name) {
-    printf("TODO\n");
+    COMMAND_PACKAGE commandPackage;
+    requestDownload(socketDescriptor, file_name);
+    receiveCommandPackage(&commandPackage, socketDescriptor);
+    if(commandPackage.dataPackagesAmount == -1) {
+        printf("The requested file does not exist. Use list_server to list available files\n");
+        return;
+    }
+    receiveFile(socketDescriptor, commandPackage, LOCAL);
 }
 
 void delete(int socketDescriptor, char *file_name) {

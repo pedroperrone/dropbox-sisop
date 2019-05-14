@@ -163,6 +163,9 @@ void* processConnection_REQUEST(void *clientSocket) {
         case LIST_SERVER:
             listServer(socket);
             break;
+        case DOWNLOAD:
+            sendDownload(socket, commandPackage);
+            break;
         default:
             break;
         }
@@ -280,6 +283,9 @@ int sendFile(FILE *fileDescriptor, int socketDescriptor, char filename[]) {
     commandPackage.dataPackagesAmount = calculateFileSize(fileDescriptor);
     strncpy((char*) &(commandPackage.filename), filename, FILENAME_LENGTH);
     write(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE));
+    if(fileDescriptor == NULL) {
+        return 1;
+    }
 
     package.index = 1;
     while ((package.dataSize = fread(&(package.data), 1, PACKAGE_SIZE, fileDescriptor)) == PACKAGE_SIZE) {
@@ -317,6 +323,19 @@ int sendRemove(int socketDescriptor, char filename[]) {
     return 1;
 }
 
+int sendDownload(int socketDescriptor, COMMAND_PACKAGE commandPackage) {
+    USER *user = findUserFromSocket(socketDescriptor);
+    char filename[USERNAME_LENGTH + 1 + FILENAME_LENGTH];
+    if (user == NULL) {
+        perror("No user with the current socket");
+    }
+    filename[0] = '\0';
+    strncpy(filename, (char *) &(user->username), USERNAME_LENGTH);
+    strcat(filename, "/");
+    strncat(filename, (char*) &(commandPackage.filename), FILENAME_LENGTH);
+    return sendFile(fopen(filename, "r"), socketDescriptor, (char*) commandPackage.filename);
+}
+
 int receiveFile(int socketDescriptor, COMMAND_PACKAGE command, LOCATION location) {
     PACKAGE package;
     FILE *receivedFile;
@@ -330,10 +349,12 @@ int receiveFile(int socketDescriptor, COMMAND_PACKAGE command, LOCATION location
         }
         mkdir(user->username, 0777);
         strcpy(filename, user->username);
+        strcat(filename, "/");
+    } else if(location == CLIENT) {
+        strcpy(filename, "sync_dir/");
     } else {
-        strcpy(filename, "sync_dir");
+        filename[0] = '\0';
     }
-    strcat(filename, "/");
     strncat(filename, (char*) &(command.filename), FILENAME_LENGTH);
     if ((receivedFile = fopen(filename, "w")) == NULL) {
         return 0;
@@ -351,6 +372,17 @@ int receiveFile(int socketDescriptor, COMMAND_PACKAGE command, LOCATION location
         }
     } while (package.index < command.dataPackagesAmount);
     fclose(receivedFile);
+    return 1;
+}
+
+int requestDownload(int socketDescriptor, char filename[]) {
+    COMMAND_PACKAGE commandPackage;
+    commandPackage.command = DOWNLOAD;
+    strncpy((char*) &(commandPackage.filename), filename, FILENAME_LENGTH);
+    if(write(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(commandPackage)) {
+        perror("Error sending command to download file");
+        return 0;
+    }
     return 1;
 }
 
@@ -510,6 +542,7 @@ int writePackage(PACKAGE package, FILE *file) {
 
 int calculateFileSize(FILE *fileDescriptor) {
     int fileSize;
+    if(fileDescriptor == NULL) return -1;
     fseek(fileDescriptor, 0, SEEK_END);
     fileSize = ftell(fileDescriptor);
     fseek(fileDescriptor, 0, SEEK_SET);

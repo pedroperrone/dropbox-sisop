@@ -68,5 +68,7 @@ void enqueueSyncFile(int sockfd, COMMAND_PACKAGE command, int action, USER *user
 LIST *getListServer(int socketDescriptor);
 int countNumberOfFiles(DIR *dirDescriptor);
 LIST *getListOfFilesInfo(DIR *dirDescriptor, char username[]);
+int requestDownload(int socketDescriptor, char filename[]);
+int sendDownload(int socketDescriptor, COMMAND_PACKAGE commandPackage);
 
 #endif

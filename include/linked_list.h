@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 typedef struct node {
   void* data;
