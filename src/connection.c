@@ -164,7 +164,7 @@ void* processConnection_REQUEST(void *clientSocket) {
             listServer(socket);
             break;
         case DOWNLOAD:
-            sendFile(fopen(commandPackage.filename, "r"), socket, commandPackage.filename);
+            sendDownload(socket, commandPackage);
             break;
         default:
             break;
@@ -321,6 +321,19 @@ int sendRemove(int socketDescriptor, char filename[]) {
         return 0;
     }
     return 1;
+}
+
+int sendDownload(int socketDescriptor, COMMAND_PACKAGE commandPackage) {
+    USER *user = findUserFromSocket(socketDescriptor);
+    char filename[USERNAME_LENGTH + 1 + FILENAME_LENGTH];
+    if (user == NULL) {
+        perror("No user with the current socket");
+    }
+    filename[0] = '\0';
+    strncpy(filename, (char *) &(user->username), USERNAME_LENGTH);
+    strcat(filename, "/");
+    strncat(filename, (char*) &(commandPackage.filename), FILENAME_LENGTH);
+    return sendFile(fopen(filename, "r"), socketDescriptor, (char*) commandPackage.filename);
 }
 
 int receiveFile(int socketDescriptor, COMMAND_PACKAGE command, LOCATION location) {
