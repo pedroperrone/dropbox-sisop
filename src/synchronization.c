@@ -23,7 +23,7 @@ void* handleLocalChanges(void *sockfd) {
         perror("Couldn't initialize inotify");
     }
 
-    watch_dir = inotify_add_watch(inotifyfd, "sync_dir", IN_CREATE | IN_CLOSE_WRITE | IN_DELETE);
+    watch_dir = inotify_add_watch(inotifyfd, "sync_dir", IN_CREATE | IN_CLOSE_WRITE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO);
 
     if (watch_dir == -1)
         perror("Couldn't add watch to sync_dir");
@@ -38,11 +38,11 @@ void* handleLocalChanges(void *sockfd) {
                 strcpy(path, "sync_dir/");
                 strcat(path, event->name);
                 if ( !hasStringElement(event->name, ignore_list) ) {
-                    if ( event->mask & IN_CREATE && !(event->mask & IN_ISDIR) ) {
+                    if ( ( (event->mask & IN_CREATE) || (event->mask & IN_MOVED_TO) ) && !(event->mask & IN_ISDIR) ) {
                         // File created
                         upload(socket, path);
                     }
-                    if ( event->mask & IN_DELETE && !(event->mask & IN_ISDIR) ) {
+                    if ( ( (event->mask & IN_DELETE) || (event->mask & IN_MOVED_FROM) ) && !(event->mask & IN_ISDIR) ) {
                         // File deleted
                         delete(socket, event->name);
                     }

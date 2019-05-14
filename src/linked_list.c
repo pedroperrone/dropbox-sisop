@@ -1,3 +1,4 @@
+#include <pthread.h>
 #include "../include/linked_list.h"
 
 pthread_mutex_t list_lock;
