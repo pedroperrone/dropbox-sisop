@@ -1,7 +1,5 @@
 #include "../include/linked_list.h"
 
-pthread_mutex_t list_lock = PTHREAD_MUTEX_INITIALIZER;
-
 NODE *createNode(void* data) {
     NODE *newNode = malloc(sizeof(NODE));
     if (!newNode) {
@@ -18,11 +16,12 @@ LIST *createList() {
         return NULL;
     }
     list->head = NULL;
+    pthread_mutex_init(&list->mutex, NULL);
     return list;
 }
 
 void add(void* data, LIST *list) {
-    pthread_mutex_lock(&list_lock);
+    pthread_mutex_lock(&list->mutex);
     NODE *current = NULL;
     if (list->head == NULL) {
         list->head = createNode(data);
@@ -34,11 +33,11 @@ void add(void* data, LIST *list) {
         }
         current->next = createNode(data);
     }
-    pthread_mutex_unlock(&list_lock);
+    pthread_mutex_unlock(&list->mutex);
 }
 
 void removeFromList(void *data, LIST *list) {
-    pthread_mutex_lock(&list_lock);
+    pthread_mutex_lock(&list->mutex);
     NODE *current = list->head;
     NODE *previous = current;
     while (current != NULL) {
@@ -48,13 +47,13 @@ void removeFromList(void *data, LIST *list) {
                 list->head = current->next;
             }
             free(current);
-            pthread_mutex_unlock(&list_lock);
+            pthread_mutex_unlock(&list->mutex);
             return;
         }
         previous = current;
         current = current->next;
     }
-    pthread_mutex_unlock(&list_lock);
+    pthread_mutex_unlock(&list->mutex);
 }
 
 void destroy(LIST *list) {
@@ -69,15 +68,15 @@ void destroy(LIST *list) {
 }
 
 int hasStringElement(char *string, LIST *list) {
-    pthread_mutex_lock(&list_lock);
+    pthread_mutex_lock(&list->mutex);
     NODE *current = list->head;
     while (current != NULL) {
         if (strcmp(current->data,  string) == 0) {
-            pthread_mutex_unlock(&list_lock);
+            pthread_mutex_unlock(&list->mutex);
             return 1;
         }
         current = current->next;
     }
-    pthread_mutex_unlock(&list_lock);
+    pthread_mutex_unlock(&list->mutex);
     return 0;
 }
