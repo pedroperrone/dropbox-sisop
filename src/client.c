@@ -11,10 +11,6 @@
 #include "../include/cli.h"
 #include "../include/synchronization.h"
 
-// Used to handle MAC times
-#include <sys/stat.h>
-#include <time.h>
-
 int main(int argc, char *argv[]) {
     int sockfd[NUMBER_OF_SOCKET_TYPES];
     char *hostname;
@@ -28,13 +24,6 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
 
-    // MAC times example
-    // struct stat info;
-    // stat("teste.txt", &info);
-    // printf("Modification: %s", ctime((&info.st_mtime)));
-    // printf("Access: %s", ctime((&info.st_atime)));
-    // printf("Creation: %s", ctime((&info.st_ctime)));
-
     username = argv[1];
     hostname = argv[2];
     port = atoi(argv[3]);
@@ -43,7 +32,7 @@ int main(int argc, char *argv[]) {
     sockfd[NOTIFY_CLIENT] = createSocket(NOTIFY_CLIENT, username, hostname, port);
     sockfd[NOTIFY_SERVER] = createSocket(NOTIFY_SERVER, username, hostname, port);
 
-    mkdir("sync_dir", 0777);
+    get_sync_dir(sockfd[REQUEST]);
 
     pthread_create(&handleLocalChangesThread, NULL, handleLocalChanges, (void *)&sockfd[NOTIFY_SERVER]);
     pthread_create(&handleRemoteChangesThread, NULL, handleRemoteChanges, (void *)&sockfd[NOTIFY_CLIENT]);

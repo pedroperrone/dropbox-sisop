@@ -31,7 +31,7 @@ typedef struct package {
 } PACKAGE;
 
 typedef struct command_package {
-    int command;
+    COMMAND command;
     int dataPackagesAmount;
     char filename[FILENAME_LENGTH];
 } COMMAND_PACKAGE;
@@ -69,6 +69,8 @@ LIST *getListServer(int socketDescriptor);
 int countNumberOfFiles(DIR *dirDescriptor);
 LIST *getListOfFilesInfo(DIR *dirDescriptor, char username[]);
 int requestDownload(int socketDescriptor, char filename[]);
+int requestSyncDir(int socketDescriptor);
 int sendDownload(int socketDescriptor, COMMAND_PACKAGE commandPackage);
+int sendSyncDir(int socketDescriptor);
 
 #endif

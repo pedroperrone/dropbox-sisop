@@ -166,6 +166,9 @@ void* processConnection_REQUEST(void *clientSocket) {
         case DOWNLOAD:
             sendDownload(socket, commandPackage);
             break;
+        case GET_SYNC_DIR:
+            sendSyncDir(socket);
+            break;
         default:
             break;
         }
@@ -336,6 +339,48 @@ int sendDownload(int socketDescriptor, COMMAND_PACKAGE commandPackage) {
     return sendFile(fopen(filename, "r"), socketDescriptor, (char*) commandPackage.filename);
 }
 
+int sendSyncDir(int socketDescriptor) {
+    USER *user;
+    DIR *mydir;
+    FILE_INFO *fileInfo;
+    LIST *listOfFiles;
+    NODE *current;
+    char filename[USERNAME_LENGTH + 1 + FILENAME_LENGTH];
+    COMMAND_PACKAGE commandPackage;
+
+    user = findUserFromSocket(socketDescriptor);
+    if (user == NULL){
+        perror("No user with the current socket");
+    }
+
+    mydir = opendir((char *) &(user->username));
+
+    listOfFiles = getListOfFilesInfo(mydir, (char*) &(user->username));
+    current = listOfFiles->head;
+    while(current != NULL) {
+        fileInfo = current->data;
+
+        filename[0] = '\0';
+        strncpy(filename, (char *) &(user->username), USERNAME_LENGTH);
+        strcat(filename, "/");
+        strncat(filename, fileInfo->filename, FILENAME_LENGTH);
+
+        sendFile(fopen(filename, "r"), socketDescriptor, (char*) fileInfo->filename);
+
+        current = current->next;
+    }
+
+    commandPackage.command = END_GET_SYNC_DIR;
+    if (write(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
+        perror("Error on sending data");
+        return 1;
+    }
+
+    destroy(listOfFiles);
+    closedir(mydir);
+    return 0;
+}
+
 int receiveFile(int socketDescriptor, COMMAND_PACKAGE command, LOCATION location) {
     PACKAGE package;
     FILE *receivedFile;
@@ -384,6 +429,16 @@ int requestDownload(int socketDescriptor, char filename[]) {
         return 0;
     }
     return 1;
+}
+
+int requestSyncDir(int socketDescriptor) {
+    COMMAND_PACKAGE commandPackage;
+    commandPackage.command = GET_SYNC_DIR;
+    if(write(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(commandPackage)) {
+        perror("Error sending command to download sync_dir");
+        return 1;
+    }
+    return 0;
 }
 
 int deleteFile(int socketDescriptor, COMMAND_PACKAGE commandPackage, LOCATION location) {
