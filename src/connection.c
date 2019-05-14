@@ -336,12 +336,12 @@ int receiveFile(int socketDescriptor, COMMAND_PACKAGE command, LOCATION location
         }
         mkdir(user->username, 0777);
         strcpy(filename, user->username);
+        strcat(filename, "/");
     } else if(location == CLIENT) {
-        strcpy(filename, "sync_dir");
+        strcpy(filename, "sync_dir/");
     } else {
-        filename[0] = '.';
+        filename[0] = '\0';
     }
-    strcat(filename, "/");
     strncat(filename, (char*) &(command.filename), FILENAME_LENGTH);
     if ((receivedFile = fopen(filename, "w")) == NULL) {
         return 0;
