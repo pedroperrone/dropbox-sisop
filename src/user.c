@@ -92,18 +92,22 @@ void printUsers() {
 }
 
 USER *findUserFromSocket(int socketDescriptor) {
+    pthread_mutex_lock(&usersList->lock);
     NODE *current = usersList->head;
     USER *userPointer;
     if (current == NULL) {
+        pthread_mutex_unlock(&usersList->lock);
         return NULL;
     }
     while (current != NULL) {
         userPointer = (USER *)current->data;
         if (socketBelongsToUser(userPointer, socketDescriptor)) {
+            pthread_mutex_unlock(&usersList->lock);
             return userPointer;
         }
         current = current->next;
     }
+    pthread_mutex_unlock(&usersList->lock);
     return NULL;
 }
 
@@ -118,18 +122,22 @@ int socketBelongsToUser(USER *user, int socketDescriptor) {
 }
 
 void *findUser(char username[]) {
+    pthread_mutex_lock(&usersList->lock);
     NODE *current = usersList->head;
     USER *userPointer;
     if (current == NULL) {
+        pthread_mutex_unlock(&usersList->lock);
         return NULL;
     }
     while (current != NULL) {
         userPointer = (USER *)current->data;
         if (strncmp(userPointer->username, username, USERNAME_LENGTH) == 0) {
+            pthread_mutex_unlock(&usersList->lock);
             return userPointer;
         }
         current = current->next;
     }
+    pthread_mutex_unlock(&usersList->lock);
     return NULL;
 }
 
