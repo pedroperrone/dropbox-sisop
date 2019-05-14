@@ -81,7 +81,6 @@ void cli(int socketDescriptor) {
     char command[MAX_COMMAND_SIZE];
     char argument[MAX_COMMAND_SIZE];
 
-    sleep(0.1);
     while(TRUE) {
         read_line(command, argument);
 

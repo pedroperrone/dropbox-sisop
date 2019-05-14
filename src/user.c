@@ -2,6 +2,8 @@
 
 LIST *usersList;
 pthread_mutex_t removeUserSocket_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t createSession_lock1 = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t createSession_lock2 = PTHREAD_MUTEX_INITIALIZER;
 
 int initializeUsersList() {
     usersList = createList();
@@ -12,10 +14,13 @@ int createSession(char username[], int socketDescriptor,
                   SOCKET_TYPE socket_type)
 {
     USER *userPointer;
+
+    pthread_mutex_lock(&createSession_lock1);
     userPointer = (USER*) findUser(username);
     if(userPointer == NULL) {
         userPointer = (USER*) malloc(sizeof(USER));
         if(userPointer == NULL) {
+            pthread_mutex_unlock(&createSession_lock1);
             return -1;
         }
         memcpy(&(userPointer->username), username, USERNAME_LENGTH);
@@ -28,12 +33,16 @@ int createSession(char username[], int socketDescriptor,
         }
         add(userPointer, usersList);
     }
+    pthread_mutex_unlock(&createSession_lock1);
+
+    pthread_mutex_lock(&createSession_lock2);
     if(userHasFreeSession(userPointer, socket_type)) {
         setSession(userPointer, socketDescriptor, socket_type);
-        fflush(stdout);
-        return 1;
+        pthread_mutex_unlock(&createSession_lock2);
+        return 0;
     }
-    return 0;
+    pthread_mutex_unlock(&createSession_lock2);
+    return 1;
 }
 
 int userHasFreeSession(USER *user, SOCKET_TYPE socket_type) {

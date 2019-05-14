@@ -116,7 +116,7 @@ void handleNewRequest(int mainSocket) {
         exit(EXIT_FAILURE);
     }
 
-    if (createSession(username, new_socket, socket_type) != 1) {
+    if (createSession(username, new_socket, socket_type) != 0) {
         write(new_socket, failureByteMessage, 1);
         close(new_socket);
         return;
