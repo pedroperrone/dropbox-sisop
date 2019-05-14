@@ -64,7 +64,17 @@ void list_client(int socketDescriptor) {
 }
 
 void get_sync_dir(int socketDescriptor) {
-    printf("TODO\n");
+    COMMAND_PACKAGE commandPackage;
+
+    system("rm -r sync_dir");
+    mkdir("sync_dir", 0755);
+
+    requestSyncDir(socketDescriptor);
+    while (1) {
+        receiveCommandPackage(&commandPackage, socketDescriptor);
+        if(commandPackage.command == END_GET_SYNC_DIR) break;
+        receiveFile(socketDescriptor, commandPackage, CLIENT);
+    }
 }
 
 void cli(int socketDescriptor) {
