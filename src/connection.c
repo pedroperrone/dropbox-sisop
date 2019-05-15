@@ -329,6 +329,8 @@ int sendRemove(int socketDescriptor, char filename[]) {
 
 int sendDownload(int socketDescriptor, COMMAND_PACKAGE commandPackage) {
     USER *user = findUserFromSocket(socketDescriptor);
+    FILE *file;
+    int ret;
     char filename[USERNAME_LENGTH + 1 + FILENAME_LENGTH];
     if (user == NULL) {
         perror("No user with the current socket");
@@ -337,10 +339,20 @@ int sendDownload(int socketDescriptor, COMMAND_PACKAGE commandPackage) {
     strncpy(filename, (char *) &(user->username), USERNAME_LENGTH);
     strcat(filename, "/");
     strncat(filename, (char*) &(commandPackage.filename), FILENAME_LENGTH);
-    return sendFile(fopen(filename, "r"), socketDescriptor, (char*) commandPackage.filename);
+
+    file = fopen(filename, "r");
+    if(file == NULL) {
+        perror("Error opening file\n");
+        return 0;
+    }
+    ret = sendFile(file, socketDescriptor, (char*) commandPackage.filename);
+    fclose(file);
+
+    return ret;
 }
 
 int sendSyncDir(int socketDescriptor) {
+    FILE *file;
     USER *user;
     DIR *mydir;
     FILE_INFO *fileInfo;
@@ -366,7 +378,14 @@ int sendSyncDir(int socketDescriptor) {
         strcat(filename, "/");
         strncat(filename, fileInfo->filename, FILENAME_LENGTH);
 
-        sendFile(fopen(filename, "r"), socketDescriptor, (char*) fileInfo->filename);
+        file = fopen(filename, "r");
+        if(file == NULL) {
+            perror("Error opening file\n");
+            return 0;
+        }
+
+        sendFile(file, socketDescriptor, (char*) fileInfo->filename);
+        fclose(file);
 
         current = current->next;
     }
@@ -401,7 +420,7 @@ int receiveFile(int socketDescriptor, COMMAND_PACKAGE command, LOCATION location
     } else {
         filename[0] = '\0';
     }
-    strncat(filename, (char*) &(command.filename), FILENAME_LENGTH);
+    strcat(filename, (char*) &(command.filename));
     if ((receivedFile = fopen(filename, "w")) == NULL) {
         return 0;
     }
@@ -444,7 +463,7 @@ int requestSyncDir(int socketDescriptor) {
 
 int deleteFile(int socketDescriptor, COMMAND_PACKAGE commandPackage, LOCATION location) {
     USER *user;
-    char filename[FILENAME_LENGTH + 10];
+    char filename[FILENAME_LENGTH];
 
     if(location == SERVER) {
         user = findUserFromSocket(socketDescriptor);
@@ -455,7 +474,7 @@ int deleteFile(int socketDescriptor, COMMAND_PACKAGE commandPackage, LOCATION lo
     } else
         strcpy(filename, "sync_dir");
     strcat(filename, "/");
-    strncat(filename, (char*) &(commandPackage.filename), FILENAME_LENGTH);
+    strcat(filename, (char*) &(commandPackage.filename));
     return remove(filename) == 0;
 }
 
