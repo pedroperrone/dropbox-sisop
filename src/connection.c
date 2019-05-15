@@ -444,7 +444,7 @@ int requestSyncDir(int socketDescriptor) {
 
 int deleteFile(int socketDescriptor, COMMAND_PACKAGE commandPackage, LOCATION location) {
     USER *user;
-    char filename[FILENAME_LENGTH];
+    char filename[FILENAME_LENGTH + 10];
 
     if(location == SERVER) {
         user = findUserFromSocket(socketDescriptor);

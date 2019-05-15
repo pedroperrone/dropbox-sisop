@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "../include/linked_list.h"
 #include "../include/dropbox.h"
+#include "../include/command.h"
 
 #define USERNAME_LENGTH 64
 #define NUM_SESSIONS 2
@@ -13,7 +14,7 @@
 typedef struct sync_file {
   char *filename;
   int sockfd;
-  int action;
+  COMMAND action;
 } SYNC_FILE;
 
 typedef struct user {

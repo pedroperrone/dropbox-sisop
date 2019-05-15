@@ -56,6 +56,26 @@ void removeFromList(void *data, LIST *list) {
     pthread_mutex_unlock(&list->lock);
 }
 
+void removeStringFromList(char *string, LIST *list) {
+    pthread_mutex_lock(&list->lock);
+    NODE *current = list->head;
+    NODE *previous = current;
+    while (current != NULL) {
+        if (strcmp(current->data, string) == 0) {
+            previous->next = current->next;
+            if (current == list->head) {
+                list->head = current->next;
+            }
+            free(current);
+            pthread_mutex_unlock(&list->lock);
+            return;
+        }
+        previous = current;
+        current = current->next;
+    }
+    pthread_mutex_unlock(&list->lock);
+}
+
 void destroy(LIST *list) {
     NODE *current = list->head;
     NODE *next = current;

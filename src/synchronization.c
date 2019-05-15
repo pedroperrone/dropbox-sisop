@@ -51,7 +51,7 @@ void* handleLocalChanges(void *sockfd) {
                         upload(socket, path);
                     }
                 } else {
-                    removeFromList(event->name, ignore_list);
+                    removeStringFromList(event->name, ignore_list);
                 }
             }
             i += EVENT_SIZE + event->len;
@@ -78,6 +78,7 @@ void* handleRemoteChanges(void *sockfd) {
 void print_ignore_list() {
     NODE *current = ignore_list->head;
     char* filename;
+    printf("INÍCIO DA LISTA DE FILENAMES\n");
     while(current != NULL) {
         filename = (char*) current->data;
         printf("Filename: %s\n", filename);
