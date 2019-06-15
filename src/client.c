@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
     *notifyClientSocket = getSocketByType(NOTIFY_CLIENT);
     *notifyServerSocket = getSocketByType(NOTIFY_SERVER);
 
-    pthread_create(&handleLocalChangesThread, NULL, handleLocalChanges, (void *)notifyServerSocket);
+    pthread_create(&handleLocalChangesThread, NULL, handleLocalChanges, NULL);
     pthread_create(&handleRemoteChangesThread, NULL, handleRemoteChanges, (void *)notifyClientSocket);
     cli();
 

@@ -8,8 +8,7 @@
 LIST *ignore_list = NULL;
 pthread_mutex_t ignore_list_lock = PTHREAD_MUTEX_INITIALIZER;
 
-void* handleLocalChanges(void *sockfd) {
-    int socket = *(int *) sockfd;
+void* handleLocalChanges() {
     int inotifyfd, watch_dir;
     char buffer[BUF_LEN];
     char path[FILENAME_LEN];
@@ -40,11 +39,11 @@ void* handleLocalChanges(void *sockfd) {
                 if ( !hasStringElement(event->name, ignore_list) ) {
                     if ( ( (event->mask & IN_DELETE) || (event->mask & IN_MOVED_FROM) ) && !(event->mask & IN_ISDIR) ) {
                         // File deleted
-                        delete(socket, event->name);
+                        delete(getSocketByType(NOTIFY_SERVER), event->name);
                     }
                     if ( ( (event->mask & IN_CLOSE_WRITE) || (event->mask & IN_MOVED_TO) ) && !(event->mask & IN_ISDIR) ) {
                         // File modified
-                        upload(socket, path);
+                        upload(getSocketByType(NOTIFY_SERVER), path);
                     }
                 } else {
                     removeStringFromList(event->name, ignore_list);

@@ -9,7 +9,6 @@
 #define MAX_COMMAND_SIZE 100
 #define FALSE 0
 #define TRUE 1
-#define CLI_SOCKET_TYPE REQUEST
 
 void read_line(char *command, char *argument);
 void upload(int socketDescriptor, char *file_name);

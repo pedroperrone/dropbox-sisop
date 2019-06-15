@@ -85,17 +85,17 @@ void cli() {
         read_line(command, argument);
 
         if(strcmp(command, "upload") == 0) {
-            upload(getSocketByType(CLI_SOCKET_TYPE), argument);
+            upload(getSocketByType(REQUEST), argument);
         } else if(strcmp(command, "download") == 0){
-            download(getSocketByType(CLI_SOCKET_TYPE), argument);
+            download(getSocketByType(REQUEST), argument);
         } else if(strcmp(command, "delete") == 0){
-            delete (getSocketByType(CLI_SOCKET_TYPE), argument);
+            delete (getSocketByType(REQUEST), argument);
         } else if(strcmp(command, "list_server") == 0){
-            list_server(getSocketByType(CLI_SOCKET_TYPE));
+            list_server(getSocketByType(REQUEST));
         } else if(strcmp(command, "list_client") == 0){
-            list_client(getSocketByType(CLI_SOCKET_TYPE));
+            list_client(getSocketByType(REQUEST));
         } else if(strcmp(command, "get_sync_dir") == 0){
-            get_sync_dir(getSocketByType(CLI_SOCKET_TYPE));
+            get_sync_dir(getSocketByType(REQUEST));
         } else if(strcmp(command, "exit") == 0){
             break;
         } else if(strcmp(command, "") == 0){
