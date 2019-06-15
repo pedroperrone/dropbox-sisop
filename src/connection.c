@@ -238,25 +238,6 @@ void* processConnection_NOTIFY_SERVER(void *clientSocket) {
     return NULL;
 }
 
-void receiveServerNotification(int socket, LIST *ignore_list) {
-    COMMAND_PACKAGE commandPackage;
-    do {
-        receiveCommandPackage(&commandPackage, socket);
-        switch (commandPackage.command) {
-        case UPLOAD:
-            add(commandPackage.filename, ignore_list);
-            receiveFile(socket, commandPackage, CLIENT);
-            break;
-        case DELETE:
-            add(commandPackage.filename, ignore_list);
-            deleteFile(socket, commandPackage, CLIENT);
-        default:
-            break;
-        }
-    } while (commandPackage.command != EXIT);
-    close(socket);
-}
-
 void destroyConnection(int socketDescriptor) {
     removeUserSocket(socketDescriptor);
     close(socketDescriptor);

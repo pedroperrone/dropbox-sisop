@@ -18,7 +18,6 @@ int main(int argc, char *argv[]) {
     int port;
     pthread_t handleLocalChangesThread;
     pthread_t handleRemoteChangesThread;
-    int *notifyServerSocket = (int *)malloc(sizeof(int)), *notifyClientSocket = (int *)malloc(sizeof(int));
 
     if (argc != 4) {
         fprintf(stderr, "Usage: %s username hostname port\n", argv[0]);
@@ -29,29 +28,22 @@ int main(int argc, char *argv[]) {
     hostname = argv[2];
     port = atoi(argv[3]);
 
-    // sockfd[REQUEST] = createSocket(REQUEST, username, hostname, port);
-    // sockfd[NOTIFY_CLIENT] = createSocket(NOTIFY_CLIENT, username, hostname, port);
-    // sockfd[NOTIFY_SERVER] = createSocket(NOTIFY_SERVER, username, hostname, port);
-
     initializeFrontend(hostname, port, username);
 
     get_sync_dir(getSocketByType(REQUEST));
 
-    *notifyClientSocket = getSocketByType(NOTIFY_CLIENT);
-    *notifyServerSocket = getSocketByType(NOTIFY_SERVER);
-
     pthread_create(&handleLocalChangesThread, NULL, handleLocalChanges, NULL);
-    pthread_create(&handleRemoteChangesThread, NULL, handleRemoteChanges, (void *)notifyClientSocket);
+    pthread_create(&handleRemoteChangesThread, NULL, handleRemoteChanges, NULL);
     cli();
 
     sendExit(getSocketByType(REQUEST));
     shutdown(getSocketByType(REQUEST), 2);
 
-    sendExit(getSocketByType(REQUEST));
-    shutdown(getSocketByType(REQUEST), 2);
+    sendExit(getSocketByType(NOTIFY_CLIENT));
+    shutdown(getSocketByType(NOTIFY_CLIENT), 2);
 
-    sendExit(getSocketByType(REQUEST));
-    shutdown(getSocketByType(REQUEST), 2);
+    sendExit(getSocketByType(NOTIFY_SERVER));
+    shutdown(getSocketByType(NOTIFY_SERVER), 2);
 
     return 0;
 }

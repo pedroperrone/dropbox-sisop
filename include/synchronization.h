@@ -13,7 +13,7 @@
 #define TRUE 1
 
 void* handleLocalChanges();
-void* handleRemoteChanges(void *sockfd);
+void* handleRemoteChanges();
 void print_ignore_list();
 
 #endif

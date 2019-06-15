@@ -58,14 +58,28 @@ void* handleLocalChanges() {
     return NULL;
 }
 
-void* handleRemoteChanges(void *sockfd) {
-    int socket = *(int *) sockfd;
-
+void* handleRemoteChanges() {
+    COMMAND_PACKAGE commandPackage;
+    int socket;
     if(!ignore_list)
         if ((ignore_list = createList()) == NULL)
             perror("Could not create ignore list");
 
-    receiveServerNotification(socket, ignore_list);
+    do {
+        socket = getSocketByType(NOTIFY_CLIENT);
+        receiveCommandPackage(&commandPackage, socket);
+        switch (commandPackage.command) {
+        case UPLOAD:
+            add(commandPackage.filename, ignore_list);
+            receiveFile(socket, commandPackage, CLIENT);
+            break;
+        case DELETE:
+            add(commandPackage.filename, ignore_list);
+            deleteFile(socket, commandPackage, CLIENT);
+        default:
+            break;
+        }
+    } while (commandPackage.command != EXIT);
 
     return NULL;
 }
