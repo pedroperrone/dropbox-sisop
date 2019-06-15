@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
 
     pthread_create(&handleLocalChangesThread, NULL, handleLocalChanges, (void *)notifyServerSocket);
     pthread_create(&handleRemoteChangesThread, NULL, handleRemoteChanges, (void *)notifyClientSocket);
-    cli(getSocketByType(REQUEST));
+    cli();
 
     sendExit(getSocketByType(REQUEST));
     shutdown(getSocketByType(REQUEST), 2);

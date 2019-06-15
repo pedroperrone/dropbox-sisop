@@ -77,7 +77,7 @@ void get_sync_dir(int socketDescriptor) {
     }
 }
 
-void cli(int socketDescriptor) {
+void cli() {
     char command[MAX_COMMAND_SIZE];
     char argument[MAX_COMMAND_SIZE];
 
@@ -85,17 +85,17 @@ void cli(int socketDescriptor) {
         read_line(command, argument);
 
         if(strcmp(command, "upload") == 0) {
-            upload(socketDescriptor, argument);
+            upload(getSocketByType(CLI_SOCKET_TYPE), argument);
         } else if(strcmp(command, "download") == 0){
-            download(socketDescriptor, argument);
+            download(getSocketByType(CLI_SOCKET_TYPE), argument);
         } else if(strcmp(command, "delete") == 0){
-            delete(socketDescriptor, argument);
+            delete (getSocketByType(CLI_SOCKET_TYPE), argument);
         } else if(strcmp(command, "list_server") == 0){
-            list_server(socketDescriptor);
+            list_server(getSocketByType(CLI_SOCKET_TYPE));
         } else if(strcmp(command, "list_client") == 0){
-            list_client(socketDescriptor);
+            list_client(getSocketByType(CLI_SOCKET_TYPE));
         } else if(strcmp(command, "get_sync_dir") == 0){
-            get_sync_dir(socketDescriptor);
+            get_sync_dir(getSocketByType(CLI_SOCKET_TYPE));
         } else if(strcmp(command, "exit") == 0){
             break;
         } else if(strcmp(command, "") == 0){
