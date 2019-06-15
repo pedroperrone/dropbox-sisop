@@ -10,14 +10,15 @@
 #include "../include/user.h"
 #include "../include/cli.h"
 #include "../include/synchronization.h"
+#include "../include/frontend.h"
 
 int main(int argc, char *argv[]) {
-    int sockfd[NUMBER_OF_SOCKET_TYPES];
     char *hostname;
     char *username;
     int port;
     pthread_t handleLocalChangesThread;
     pthread_t handleRemoteChangesThread;
+    int *notifyServerSocket = (int *)malloc(sizeof(int)), *notifyClientSocket = (int *)malloc(sizeof(int));
 
     if (argc != 4) {
         fprintf(stderr, "Usage: %s username hostname port\n", argv[0]);
@@ -28,24 +29,29 @@ int main(int argc, char *argv[]) {
     hostname = argv[2];
     port = atoi(argv[3]);
 
-    sockfd[REQUEST] = createSocket(REQUEST, username, hostname, port);
-    sockfd[NOTIFY_CLIENT] = createSocket(NOTIFY_CLIENT, username, hostname, port);
-    sockfd[NOTIFY_SERVER] = createSocket(NOTIFY_SERVER, username, hostname, port);
+    // sockfd[REQUEST] = createSocket(REQUEST, username, hostname, port);
+    // sockfd[NOTIFY_CLIENT] = createSocket(NOTIFY_CLIENT, username, hostname, port);
+    // sockfd[NOTIFY_SERVER] = createSocket(NOTIFY_SERVER, username, hostname, port);
 
-    get_sync_dir(sockfd[REQUEST]);
+    initializeFrontend(hostname, port, username);
 
-    pthread_create(&handleLocalChangesThread, NULL, handleLocalChanges, (void *)&sockfd[NOTIFY_SERVER]);
-    pthread_create(&handleRemoteChangesThread, NULL, handleRemoteChanges, (void *)&sockfd[NOTIFY_CLIENT]);
-    cli(sockfd[REQUEST]);
+    get_sync_dir(getSocketByType(REQUEST));
 
-    sendExit(sockfd[REQUEST]);
-    shutdown(sockfd[REQUEST], 2);
+    *notifyClientSocket = getSocketByType(NOTIFY_CLIENT);
+    *notifyServerSocket = getSocketByType(NOTIFY_SERVER);
 
-    sendExit(sockfd[NOTIFY_CLIENT]);
-    shutdown(sockfd[NOTIFY_CLIENT], 2);
+    pthread_create(&handleLocalChangesThread, NULL, handleLocalChanges, (void *)notifyServerSocket);
+    pthread_create(&handleRemoteChangesThread, NULL, handleRemoteChanges, (void *)notifyClientSocket);
+    cli(getSocketByType(REQUEST));
 
-    sendExit(sockfd[NOTIFY_SERVER]);
-    shutdown(sockfd[NOTIFY_SERVER], 2);
+    sendExit(getSocketByType(REQUEST));
+    shutdown(getSocketByType(REQUEST), 2);
+
+    sendExit(getSocketByType(REQUEST));
+    shutdown(getSocketByType(REQUEST), 2);
+
+    sendExit(getSocketByType(REQUEST));
+    shutdown(getSocketByType(REQUEST), 2);
 
     return 0;
 }

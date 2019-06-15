@@ -23,6 +23,7 @@
 #define SUCCESS_BYTE_MESSAGE 'S'
 #define FILENAME_LENGTH 64
 #define DATE_STRING_LENTH 30
+#define IP_LENGTH 30
 
 typedef struct package {
     int index;
@@ -41,8 +42,13 @@ typedef struct file_info {
     struct stat details;
 } FILE_INFO;
 
+typedef struct network_address {
+    char ip[IP_LENGTH];
+    int port;
+} NETWORK_ADDRESS;
+
 void setPort(int portValue);
-int createSocket(SOCKET_TYPE type, char *hostname, char *username, int port);
+int connectSocket(SOCKET_TYPE type, char *username, struct sockaddr_in serv_addr, int sockfd);
 void* processConnection_REQUEST(void *clientSocket);
 void* processConnection_NOTIFY_CLIENT(void *clientSocket);
 void* processConnection_NOTIFY_SERVER(void *clientSocket);
