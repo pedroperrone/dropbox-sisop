@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "../include/connection.h"
+#include "../include/frontend.h"
 
 #define MAX_COMMAND_SIZE 100
 #define FALSE 0
@@ -16,7 +17,7 @@ void delete(int socketDescriptor, char *file_name);
 void list_server(int socketDescriptor);
 void list_client(int socketDescriptor);
 void get_sync_dir(int socketDescriptor);
-void cli(int socketDescriptor);
+void cli();
 void printListOfFileInfo(LIST *fileInfos);
 
 #endif

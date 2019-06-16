@@ -7,8 +7,8 @@ FLAGS=-lpthread -lm -Wall
 
 all: server client
 
-server: server.o connection.o
-	$(CC) -o dropboxServer $(BIN_DIR)/connection.o $(BIN_DIR)/server.o $(BIN_DIR)/user.o $(BIN_DIR)/linked_list.o $(FLAGS)
+server: server.o connection.o frontend.o
+	$(CC) -o dropboxServer $(BIN_DIR)/connection.o $(BIN_DIR)/server.o $(BIN_DIR)/user.o $(BIN_DIR)/linked_list.o $(BIN_DIR)/frontend.o $(FLAGS)
 
 server.o: $(SRC_DIR)/server.c
 	$(CC) -c -o $(BIN_DIR)/server.o $(SRC_DIR)/server.c $(FLAGS)
@@ -16,8 +16,8 @@ server.o: $(SRC_DIR)/server.c
 connection.o: $(SRC_DIR)/connection.c user.o
 	$(CC) -c -o $(BIN_DIR)/connection.o $(SRC_DIR)/connection.c $(FLAGS)
 
-client: client.o connection.o cli.o synchronization.o
-	$(CC) -o dropboxClient $(BIN_DIR)/client.o $(BIN_DIR)/connection.o  $(BIN_DIR)/user.o $(BIN_DIR)/linked_list.o $(BIN_DIR)/cli.o $(BIN_DIR)/synchronization.o $(FLAGS)
+client: client.o connection.o cli.o synchronization.o frontend.o
+	$(CC) -o dropboxClient $(BIN_DIR)/client.o $(BIN_DIR)/connection.o  $(BIN_DIR)/user.o $(BIN_DIR)/linked_list.o $(BIN_DIR)/cli.o $(BIN_DIR)/synchronization.o $(BIN_DIR)/frontend.o $(FLAGS)
 
 client.o: $(SRC_DIR)/client.c
 	$(CC) -c -o $(BIN_DIR)/client.o $(SRC_DIR)/client.c $(FLAGS)
@@ -33,6 +33,9 @@ user.o: $(SRC_DIR)/user.c linked_list.o
 
 linked_list.o: $(SRC_DIR)/linked_list.c
 	$(CC) -c -o $(BIN_DIR)/linked_list.o $(SRC_DIR)/linked_list.c $(FLAGS)
+
+frontend.o: $(SRC_DIR)/frontend.c connection.o
+	$(CC) -c -o $(BIN_DIR)/frontend.o $(SRC_DIR)/frontend.c $(FLAGS)
 
 clean:
 	rm $(BIN_DIR)/*.o dropboxServer dropboxClient

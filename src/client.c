@@ -10,9 +10,9 @@
 #include "../include/user.h"
 #include "../include/cli.h"
 #include "../include/synchronization.h"
+#include "../include/frontend.h"
 
 int main(int argc, char *argv[]) {
-    int sockfd[NUMBER_OF_SOCKET_TYPES];
     char *hostname;
     char *username;
     int port;
@@ -28,24 +28,22 @@ int main(int argc, char *argv[]) {
     hostname = argv[2];
     port = atoi(argv[3]);
 
-    sockfd[REQUEST] = createSocket(REQUEST, username, hostname, port);
-    sockfd[NOTIFY_CLIENT] = createSocket(NOTIFY_CLIENT, username, hostname, port);
-    sockfd[NOTIFY_SERVER] = createSocket(NOTIFY_SERVER, username, hostname, port);
+    initializeFrontend(hostname, port, username);
 
-    get_sync_dir(sockfd[REQUEST]);
+    get_sync_dir(getSocketByType(REQUEST));
 
-    pthread_create(&handleLocalChangesThread, NULL, handleLocalChanges, (void *)&sockfd[NOTIFY_SERVER]);
-    pthread_create(&handleRemoteChangesThread, NULL, handleRemoteChanges, (void *)&sockfd[NOTIFY_CLIENT]);
-    cli(sockfd[REQUEST]);
+    pthread_create(&handleLocalChangesThread, NULL, handleLocalChanges, NULL);
+    pthread_create(&handleRemoteChangesThread, NULL, handleRemoteChanges, NULL);
+    cli();
 
-    sendExit(sockfd[REQUEST]);
-    shutdown(sockfd[REQUEST], 2);
+    sendExit(getSocketByType(REQUEST));
+    shutdown(getSocketByType(REQUEST), 2);
 
-    sendExit(sockfd[NOTIFY_CLIENT]);
-    shutdown(sockfd[NOTIFY_CLIENT], 2);
+    sendExit(getSocketByType(NOTIFY_CLIENT));
+    shutdown(getSocketByType(NOTIFY_CLIENT), 2);
 
-    sendExit(sockfd[NOTIFY_SERVER]);
-    shutdown(sockfd[NOTIFY_SERVER], 2);
+    sendExit(getSocketByType(NOTIFY_SERVER));
+    shutdown(getSocketByType(NOTIFY_SERVER), 2);
 
     return 0;
 }
