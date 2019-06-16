@@ -30,20 +30,19 @@ int main(int argc, char *argv[]) {
     localPort = atoi(argv[4]);
 
     initializeFrontend(hostname, port, username, localPort);
-
-    get_sync_dir(getSocketByType(REQUEST));
+    get_sync_dir(REQUEST);
 
     pthread_create(&handleLocalChangesThread, NULL, handleLocalChanges, NULL);
     pthread_create(&handleRemoteChangesThread, NULL, handleRemoteChanges, NULL);
     cli();
 
-    sendExit(getSocketByType(REQUEST));
+    sendExit(REQUEST);
     shutdown(getSocketByType(REQUEST), 2);
 
-    sendExit(getSocketByType(NOTIFY_CLIENT));
+    sendExit(NOTIFY_CLIENT);
     shutdown(getSocketByType(NOTIFY_CLIENT), 2);
 
-    sendExit(getSocketByType(NOTIFY_SERVER));
+    sendExit(NOTIFY_SERVER);
     shutdown(getSocketByType(NOTIFY_SERVER), 2);
 
     return 0;

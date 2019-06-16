@@ -12,6 +12,8 @@ void initializeFrontend(char* hostname, int port, char* local_username, int loca
     strncpy(username, local_username, USERNAME_LENGTH);
     setNewAddress(hostname, port);
     setPort(localPort);
+    setReadFromSocketFunction(readSocketFrontend);
+    setWriteInSocketFunction(writeSocketFrontend);
     for(i = 0; i < NUMBER_OF_SOCKET_TYPES; i++) {
         if ((sockfd[i] = socket(AF_INET, SOCK_STREAM, 0)) == -1)
             fprintf(stderr, "ERROR opening socket\n");
@@ -67,4 +69,26 @@ void updateSocket(int newMainServer_fd) {
     old_socket = getSocketByType(socket_type);
     close(old_socket);
     sockfd[socket_type] = new_socket;
+}
+
+int readSocketFrontend(int type, void* destiny, int bytesToRead) {
+    int sockfd = getSocketByType(type), readBytes = -1;
+    while(readBytes < 0) {
+         readBytes = read(sockfd, destiny, bytesToRead);
+         if(readBytes < 0) {
+             sleep(1);
+         }
+    }
+    return readBytes;
+}
+
+int writeSocketFrontend(int type, void* source, int bytesToWrite) {
+    int sockfd = getSocketByType(type), readBytes = -1;
+    while (readBytes < 0) {
+        readBytes = write(sockfd, source, bytesToWrite);
+        if (readBytes < 0) {
+            sleep(1);
+        }
+    }
+    return readBytes;
 }

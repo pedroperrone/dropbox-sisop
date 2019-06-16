@@ -80,22 +80,21 @@ void get_sync_dir(int socketDescriptor) {
 void cli() {
     char command[MAX_COMMAND_SIZE];
     char argument[MAX_COMMAND_SIZE];
-
     while(TRUE) {
         read_line(command, argument);
 
         if(strcmp(command, "upload") == 0) {
-            upload(getSocketByType(REQUEST), argument);
+            upload(REQUEST, argument);
         } else if(strcmp(command, "download") == 0){
-            download(getSocketByType(REQUEST), argument);
+            download(REQUEST, argument);
         } else if(strcmp(command, "delete") == 0){
-            delete (getSocketByType(REQUEST), argument);
+            delete (REQUEST, argument);
         } else if(strcmp(command, "list_server") == 0){
-            list_server(getSocketByType(REQUEST));
+            list_server(REQUEST);
         } else if(strcmp(command, "list_client") == 0){
-            list_client(getSocketByType(REQUEST));
+            list_client(REQUEST);
         } else if(strcmp(command, "get_sync_dir") == 0){
-            get_sync_dir(getSocketByType(REQUEST));
+            get_sync_dir(REQUEST);
         } else if(strcmp(command, "exit") == 0){
             break;
         } else if(strcmp(command, "") == 0){

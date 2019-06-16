@@ -18,5 +18,7 @@ void reconnectSockets();
 int getSocketByType(SOCKET_TYPE type);
 void* waitForNewMainServer();
 void updateSocket(int newMainServer_fd);
+int readSocketFrontend(int type, void *destiny, int bytesToRead);
+int writeSocketFrontend(int type, void *source, int bytesToWrite);
 
 #endif
