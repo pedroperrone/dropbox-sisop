@@ -5,7 +5,7 @@ BIN_DIR=./bin
 SRC_DIR=./src
 FLAGS=-lpthread -lm -Wall
 
-all: server client
+all: server client replica_manager
 
 server: server.o connection.o frontend.o
 	$(CC) -o dropboxServer $(BIN_DIR)/connection.o $(BIN_DIR)/server.o $(BIN_DIR)/user.o $(BIN_DIR)/linked_list.o $(BIN_DIR)/frontend.o $(FLAGS)
@@ -21,6 +21,12 @@ client: client.o connection.o cli.o synchronization.o frontend.o
 
 client.o: $(SRC_DIR)/client.c
 	$(CC) -c -o $(BIN_DIR)/client.o $(SRC_DIR)/client.c $(FLAGS)
+
+replica_manager: replica_manager.o connection.o
+	$(CC) -o dropboxRM $(BIN_DIR)/connection.o $(BIN_DIR)/replica_manager.o $(BIN_DIR)/user.o $(BIN_DIR)/linked_list.o $(FLAGS)
+
+replica_manager.o: $(SRC_DIR)/replica_manager.c
+	$(CC) -c -o $(BIN_DIR)/replica_manager.o $(SRC_DIR)/replica_manager.c $(FLAGS)
 
 cli.o: $(SRC_DIR)/cli.c
 	$(CC) -c -o $(BIN_DIR)/cli.o $(SRC_DIR)/cli.c $(FLAGS)
@@ -38,6 +44,6 @@ frontend.o: $(SRC_DIR)/frontend.c connection.o
 	$(CC) -c -o $(BIN_DIR)/frontend.o $(SRC_DIR)/frontend.c $(FLAGS)
 
 clean:
-	rm $(BIN_DIR)/*.o dropboxServer dropboxClient
+	rm -f $(BIN_DIR)/*.o dropboxServer dropboxClient dropboxRM
 
 
