@@ -1,15 +1,35 @@
 #include "../include/connection.h"
 #include <stdio.h>
 
-int port;
-
 char failureByteMessage[1] = {FAILURE_BYTE_MESSAGE};
 char successByteMessage[1] = {SUCCESS_BYTE_MESSAGE};
 int (*readFromSocket)(int, void *, int);
 int (*writeInSocket)(int, void *, int);
 
-void setPort(int portValue) {
-    port = portValue;
+int createSocket(char *hostname, int port) {
+    int sockfd;
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+
+    server = gethostbyname(hostname);
+    if (server == NULL) {
+        fprintf(stderr, "ERROR, no such host\n");
+        exit(1);
+    }
+
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+        printf("ERROR opening socket\n");
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(port);
+    serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
+    bzero(&(serv_addr.sin_zero), 8);
+
+    while (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+        sleep(1);
+    }
+
+    return sockfd;
 }
 
 void setReadFromSocketFunction(int (*function)(int, void*, int)) {
@@ -51,29 +71,36 @@ int connectSocket(SOCKET_TYPE type, char *username, struct sockaddr_in serv_addr
     return sockfd;
 }
 
-void initializeMainSocket(int *serverfd, struct sockaddr_in *address) {
-    struct sockaddr_in add;
+int initializeMainSocket(int port, int list_queue_size) {
+    int serverfd;
+    struct sockaddr_in address;
+
     // Creating socket file descriptor
-    if ((*serverfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+    if ((serverfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
         perror("socket failed");
         exit(EXIT_FAILURE);
     }
 
-    add.sin_family = AF_INET;
-    add.sin_port = htons(port);
-    add.sin_addr.s_addr = INADDR_ANY;
-    bzero(&(add.sin_zero), 8);
+    address.sin_family = AF_INET;
+    address.sin_port = htons(port);
+    address.sin_addr.s_addr = INADDR_ANY;
+    bzero(&(address.sin_zero), 8);
+
+    // This option allows to rebind using the same address and port.
+    int true = 1;
+    setsockopt(serverfd, SOL_SOCKET, SO_REUSEADDR, &true, sizeof(int));
 
     // Bind socket to address
-    *address = add;
-    if (bind(*serverfd, (struct sockaddr *)address, sizeof(add)) < 0) {
+    if (bind(serverfd, (struct sockaddr *) &address, sizeof(address)) < 0) {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
-    if (listen(*serverfd, 5) < 0){
+    if (listen(serverfd, list_queue_size) < 0){
         perror("listen failure");
         exit(EXIT_FAILURE);
     }
+
+    return serverfd;
 }
 
 void handleNewRequest(int mainSocket) {

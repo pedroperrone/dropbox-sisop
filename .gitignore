@@ -1,6 +1,7 @@
 bin/
 dropboxServer
 dropboxClient
+dropboxRM
 
 # vagrant files
 .vagrant

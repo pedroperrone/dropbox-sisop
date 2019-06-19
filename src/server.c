@@ -11,7 +11,8 @@ int writeSocketServer(int sockfd, void* source, int bytesToWrite) {
 
 int main(int argc, char *argv[]) {
     int server_fd;
-    struct sockaddr_in address;
+    int port = atoi(argv[1]);
+    
     if(argc < 2) {
         printf("Missing parameter: port\n");
         return 1;
@@ -19,11 +20,11 @@ int main(int argc, char *argv[]) {
     if(initializeUsersList() == 0) {
         perror("Error initializing users list\n");
     }
-    setPort(atoi(argv[1]));
+
     setReadFromSocketFunction(readSocketServer);
     setWriteInSocketFunction(writeSocketServer);
 
-    initializeMainSocket(&server_fd, &address);
+    server_fd = initializeServerSocket(port, 5);
     while(1) {
         handleNewRequest(server_fd);
     }
