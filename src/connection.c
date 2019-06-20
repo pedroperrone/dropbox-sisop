@@ -5,9 +5,19 @@ int port;
 
 char failureByteMessage[1] = {FAILURE_BYTE_MESSAGE};
 char successByteMessage[1] = {SUCCESS_BYTE_MESSAGE};
+int (*readFromSocket)(int, void *, int);
+int (*writeInSocket)(int, void *, int);
 
 void setPort(int portValue) {
     port = portValue;
+}
+
+void setReadFromSocketFunction(int (*function)(int, void*, int)) {
+    readFromSocket = function;
+}
+
+void setWriteInSocketFunction(int (*function)(int, void *, int)) {
+    writeInSocket = function;
 }
 
 int connectSocket(SOCKET_TYPE type, char *username, struct sockaddr_in serv_addr, int sockfd) {
@@ -250,20 +260,20 @@ int sendFile(FILE *fileDescriptor, int socketDescriptor, char filename[]) {
     commandPackage.command = UPLOAD;
     commandPackage.dataPackagesAmount = calculateFileSize(fileDescriptor);
     strncpy((char*) &(commandPackage.filename), filename, FILENAME_LENGTH);
-    write(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE));
+    writeInSocket(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE));
     if(fileDescriptor == NULL) {
         return 1;
     }
 
     package.index = 1;
     while ((package.dataSize = fread(&(package.data), 1, PACKAGE_SIZE, fileDescriptor)) == PACKAGE_SIZE) {
-        if(write(socketDescriptor, &package, sizeof(PACKAGE)) < sizeof(PACKAGE)) {
+        if (writeInSocket(socketDescriptor, &package, sizeof(PACKAGE)) < sizeof(PACKAGE)) {
             perror("Error on sending data");
             return 0;
         }
         package.index++;
     }
-    if (write(socketDescriptor, &package, sizeof(PACKAGE)) < sizeof(PACKAGE)) {
+    if (writeInSocket(socketDescriptor, &package, sizeof(PACKAGE)) < sizeof(PACKAGE)) {
         perror("Error on sending data");
         return 0;
     }
@@ -273,7 +283,7 @@ int sendFile(FILE *fileDescriptor, int socketDescriptor, char filename[]) {
 int sendExit(int socketDescriptor) {
     COMMAND_PACKAGE commandPackage;
     commandPackage.command = EXIT;
-    if (write(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
+    if (writeInSocket(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
         perror("Error on sending data");
         return 0;
     }
@@ -284,7 +294,7 @@ int sendRemove(int socketDescriptor, char filename[]) {
     COMMAND_PACKAGE commandPackage;
     commandPackage.command = DELETE;
     strncpy((char*) &(commandPackage.filename), filename, FILENAME_LENGTH);
-    if (write(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
+    if (writeInSocket(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
         perror("Error on sending data");
         return 0;
     }
@@ -355,7 +365,7 @@ int sendSyncDir(int socketDescriptor) {
     }
 
     commandPackage.command = END_GET_SYNC_DIR;
-    if (write(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
+    if (writeInSocket(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
         perror("Error on sending data");
         return 1;
     }
@@ -408,7 +418,7 @@ int requestDownload(int socketDescriptor, char filename[]) {
     COMMAND_PACKAGE commandPackage;
     commandPackage.command = DOWNLOAD;
     strncpy((char*) &(commandPackage.filename), filename, FILENAME_LENGTH);
-    if(write(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(commandPackage)) {
+    if (writeInSocket(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(commandPackage)) {
         perror("Error sending command to download file");
         return 0;
     }
@@ -418,7 +428,7 @@ int requestDownload(int socketDescriptor, char filename[]) {
 int requestSyncDir(int socketDescriptor) {
     COMMAND_PACKAGE commandPackage;
     commandPackage.command = GET_SYNC_DIR;
-    if(write(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(commandPackage)) {
+    if (writeInSocket(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(commandPackage)) {
         perror("Error sending command to download sync_dir");
         return 1;
     }
@@ -461,7 +471,7 @@ int listServer(int socketDescriptor) {
     package.dataSize = sizeof(FILE_INFO);
     command.command = LIST_SERVER;
     command.dataPackagesAmount = countNumberOfFiles(mydir);
-    if(write(socketDescriptor, &command, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
+    if (writeInSocket(socketDescriptor, &command, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
         perror("Error on sending command for list server");
         return 0;
     }
@@ -470,7 +480,7 @@ int listServer(int socketDescriptor) {
     while(current != NULL) {
         fileInfo = current->data;
         memcpy(&(package.data), fileInfo, sizeof(FILE_INFO));
-        if (write(socketDescriptor, &(package), sizeof(PACKAGE)) < sizeof(PACKAGE)) {
+        if (writeInSocket(socketDescriptor, &(package), sizeof(PACKAGE)) < sizeof(PACKAGE)) {
             perror("Error on sending data for list server");
         }
         package.index++;
@@ -529,7 +539,7 @@ LIST* getListServer(int socketDescriptor) {
     LIST *filesInfo = createList();
     commandPackage.command = LIST_SERVER;
     int i = 0;
-    if (write(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
+    if (writeInSocket(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
         perror("Error on sending command for request list server");
     }
     receiveCommandPackage(&commandPackage, socketDescriptor);
@@ -558,7 +568,7 @@ int receivePackage(PACKAGE *package, int socketDescriptor) {
 int readAmountOfBytes(void *buffer, int socketDescriptor, int amountOfBytes) {
     int totalReadBytes = 0, bytesToRead, partialReadBytes;
     while ((bytesToRead = amountOfBytes - totalReadBytes) != 0) {
-        partialReadBytes = read(socketDescriptor, (buffer + totalReadBytes), bytesToRead);
+        partialReadBytes = readFromSocket(socketDescriptor, (buffer + totalReadBytes), bytesToRead);
         if (partialReadBytes < 0) {
             perror("Error reading socket");
             return 1;

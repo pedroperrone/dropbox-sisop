@@ -39,11 +39,11 @@ void* handleLocalChanges() {
                 if ( !hasStringElement(event->name, ignore_list) ) {
                     if ( ( (event->mask & IN_DELETE) || (event->mask & IN_MOVED_FROM) ) && !(event->mask & IN_ISDIR) ) {
                         // File deleted
-                        delete(getSocketByType(NOTIFY_SERVER), event->name);
+                        delete(NOTIFY_SERVER, event->name);
                     }
                     if ( ( (event->mask & IN_CLOSE_WRITE) || (event->mask & IN_MOVED_TO) ) && !(event->mask & IN_ISDIR) ) {
                         // File modified
-                        upload(getSocketByType(NOTIFY_SERVER), path);
+                        upload(NOTIFY_SERVER, path);
                     }
                 } else {
                     removeStringFromList(event->name, ignore_list);
@@ -60,22 +60,20 @@ void* handleLocalChanges() {
 
 void* handleRemoteChanges() {
     COMMAND_PACKAGE commandPackage;
-    int socket;
     if(!ignore_list)
         if ((ignore_list = createList()) == NULL)
             perror("Could not create ignore list");
 
     do {
-        socket = getSocketByType(NOTIFY_CLIENT);
-        receiveCommandPackage(&commandPackage, socket);
+        receiveCommandPackage(&commandPackage, NOTIFY_CLIENT);
         switch (commandPackage.command) {
         case UPLOAD:
             add(commandPackage.filename, ignore_list);
-            receiveFile(socket, commandPackage, CLIENT);
+            receiveFile(NOTIFY_CLIENT, commandPackage, CLIENT);
             break;
         case DELETE:
             add(commandPackage.filename, ignore_list);
-            deleteFile(socket, commandPackage, CLIENT);
+            deleteFile(NOTIFY_CLIENT, commandPackage, CLIENT);
         default:
             break;
         }

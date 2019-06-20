@@ -78,5 +78,7 @@ int requestDownload(int socketDescriptor, char filename[]);
 int requestSyncDir(int socketDescriptor);
 int sendDownload(int socketDescriptor, COMMAND_PACKAGE commandPackage);
 int sendSyncDir(int socketDescriptor);
+void setReadFromSocketFunction(int (*function)(int, void *, int));
+void setWriteInSocketFunction(int (*function)(int, void *, int));
 
 #endif
