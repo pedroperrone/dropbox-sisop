@@ -590,6 +590,9 @@ int readAmountOfBytes(void *buffer, int socketDescriptor, int amountOfBytes) {
             perror("Error reading socket");
             return 1;
         }
+        if (partialReadBytes == 0) {
+            return 1;
+        }
         totalReadBytes += partialReadBytes;
     }
     return 0;

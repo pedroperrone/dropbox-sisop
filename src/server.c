@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
         perror("Error initializing users list\n");
     }
     int port = atoi(argv[1]);
-    server_fd = initializeServerSocket(port, 5);
+    server_fd = initializeMainSocket(port, 5);
     while(1) {
         handleNewRequest(server_fd);
     }
