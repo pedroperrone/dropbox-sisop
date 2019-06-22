@@ -5,14 +5,15 @@ struct hostent *server;
 NETWORK_ADDRESS serverAddress;
 int sockfd[NUMBER_OF_SOCKET_TYPES];
 char username[USERNAME_LENGTH];
+int mainLocalPort;
 
 void initializeFrontend(char* hostname, int port, char* local_username, int localPort) {
     int i;
     pthread_t deamonThread;
     strncpy(username, local_username, USERNAME_LENGTH);
     setNewAddress(hostname, port);
-    setPort(localPort);
-    setReadFromSocketFunction(readSocketFrontend);
+    mainLocalPort = localPort;
+        setReadFromSocketFunction(readSocketFrontend);
     setWriteInSocketFunction(writeSocketFrontend);
     for(i = 0; i < NUMBER_OF_SOCKET_TYPES; i++) {
         if ((sockfd[i] = socket(AF_INET, SOCK_STREAM, 0)) == -1)
@@ -49,8 +50,7 @@ int getSocketByType(SOCKET_TYPE type) {
 
 void* waitForNewMainServer() {
     int newMainServer_fd;
-    struct sockaddr_in address;
-    initializeMainSocket(&newMainServer_fd, &address);
+    newMainServer_fd = initializeMainSocket(mainLocalPort, 3);
     while(1) {
         updateSocket(newMainServer_fd);
     }
