@@ -48,11 +48,12 @@ typedef struct network_address {
 } NETWORK_ADDRESS;
 
 void setPort(int portValue);
+int createSocket(char *hostname, int port);
 int connectSocket(SOCKET_TYPE type, char *username, struct sockaddr_in serv_addr, int sockfd);
 void* processConnection_REQUEST(void *clientSocket);
 void* processConnection_NOTIFY_CLIENT(void *clientSocket);
 void* processConnection_NOTIFY_SERVER(void *clientSocket);
-void initializeMainSocket(int *serverfd, struct sockaddr_in *address);
+int initializeMainSocket(int port, int list_queue_size);
 void handleNewRequest(int mainSocket);
 int sendFile(FILE *fileDescriptor, int socketDescriptor, char filename[]);
 int sendExit(int socketDescriptor);
