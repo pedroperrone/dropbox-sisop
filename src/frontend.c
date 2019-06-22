@@ -65,7 +65,11 @@ void updateSocket(int newMainServer_fd) {
         perror("accept");
         exit(EXIT_FAILURE);
     }
+    setReadFromSocketFunction(readSocketServer);
+    setWriteInSocketFunction(writeSocketServer);
     socket_type = getSocketType(new_socket);
+    setReadFromSocketFunction(readSocketFrontend);
+    setWriteInSocketFunction(writeSocketFrontend);
     old_socket = getSocketByType(socket_type);
     close(old_socket);
     sockfd[socket_type] = new_socket;
