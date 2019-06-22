@@ -9,6 +9,14 @@ int id, primary_id, num_replica_managers;
 ROLE role;
 REPLICA_MANAGER *replica_managers; // Array of replica_managers indexed by id.
 
+int readSocketServer(int sockfd, void* destiny, int bytesToRead) {
+    return read(sockfd, destiny, bytesToRead);
+}
+
+int writeSocketServer(int sockfd, void* source, int bytesToWrite) {
+    return write(sockfd, source, bytesToWrite);
+}
+
 int main(int argc, char *argv[]) {
   pthread_t receive_election_thread;
 
@@ -20,6 +28,9 @@ int main(int argc, char *argv[]) {
            "<hostnameN> <portN> ...: hostname and port of the other RMs, ordered by id.\n", argv[0]);
     return 1;
   }
+
+  setReadFromSocketFunction(readSocketServer);
+  setWriteInSocketFunction(writeSocketServer);
 
   int port = atoi(argv[1]);
   id = atoi(argv[2]);

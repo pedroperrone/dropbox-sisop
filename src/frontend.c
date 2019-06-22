@@ -13,7 +13,7 @@ void initializeFrontend(char* hostname, int port, char* local_username, int loca
     strncpy(username, local_username, USERNAME_LENGTH);
     setNewAddress(hostname, port);
     mainLocalPort = localPort;
-        setReadFromSocketFunction(readSocketFrontend);
+    setReadFromSocketFunction(readSocketFrontend);
     setWriteInSocketFunction(writeSocketFrontend);
     for(i = 0; i < NUMBER_OF_SOCKET_TYPES; i++) {
         if ((sockfd[i] = socket(AF_INET, SOCK_STREAM, 0)) == -1)
