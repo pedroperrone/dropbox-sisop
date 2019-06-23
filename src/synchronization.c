@@ -68,7 +68,6 @@ void* handleRemoteChanges() {
         receiveCommandPackage(&commandPackage, NOTIFY_CLIENT);
         switch (commandPackage.command) {
         case UPLOAD:
-            printf("a");
             add(commandPackage.filename, ignore_list);
             receiveFile(NOTIFY_CLIENT, commandPackage, CLIENT);
             break;

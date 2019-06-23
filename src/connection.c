@@ -171,8 +171,6 @@ USER* handleNewRequest(int mainSocket) {
 
     port = getUserPort(new_socket);
 
-    printf("Type: %d\n", socket_type);
-
     if (port < 0) {
         perror("Error receiving user local port");
         exit(EXIT_FAILURE);
@@ -185,7 +183,6 @@ USER* handleNewRequest(int mainSocket) {
 
     if (socket_type == REQUEST) {
         id = createSession(username, new_socket, socket_type, userAddress, port, -1);
-        printf("Id: %d\n", id);
         write(new_socket, &id, sizeof(int));
         if (id < 0) {
             write(new_socket, failureByteMessage, 1);
@@ -197,7 +194,6 @@ USER* handleNewRequest(int mainSocket) {
             fprintf(stderr, "ERROR reading from socket\n");
             exit(1);
         }
-        printf("Id: %d\n", id);
         if (createSession(username, new_socket, socket_type, userAddress, port, id) < 0) {
             write(new_socket, failureByteMessage, 1);
             close(new_socket);
@@ -269,7 +265,7 @@ void* processConnection_REQUEST(void *clientSocket) {
             receiveFile(socket, commandPackage, SERVER);
             replicateFile(commandPackage.filename, user->username);
             enqueueSyncFile(-1, commandPackage, UPLOAD, user);
-            printUsers();
+            //printUsers();
             break;
         case DELETE:
             deleteFile(socket, commandPackage, SERVER);
@@ -322,15 +318,12 @@ void* processConnection_NOTIFY_CLIENT(void *clientSocket) {
                    user->sockets[i][REQUEST] != 0)
                    {
                     if(sync_file->action == UPLOAD) {
-                        printf("SENDING FILE TO CLIENT %s WITH SOCKET %d AND PORT %d\n", user->username, user->sockets[i][NOTIFY_CLIENT], user->ports[i]);
                         if((file = fopen(file_path, "r")) == NULL) {
                             printf("Error openning file '%s'", file_path);
                         } else {
                             sendFile(file, user->sockets[i][NOTIFY_CLIENT], sync_file->filename, user->username);
                             fclose(file);
                         }
-                        printf("SENDING FILE TO CLIENT OK\n");
-
                     }
                     else {
                         sendRemove(user->sockets[i][NOTIFY_CLIENT], sync_file->filename, user->username);

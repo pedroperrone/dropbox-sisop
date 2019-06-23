@@ -48,11 +48,8 @@ void reconnectSockets() {
     close(sockfd[NOTIFY_CLIENT]);
     close(sockfd[NOTIFY_SERVER]);
 
-    printf("REQUEST\n");
     id = connectSocket(REQUEST, username, serv_addr, sockfd_REQUEST, mainLocalPort, -1);
-    printf("CLIENT\n");
     connectSocket(NOTIFY_CLIENT, username, serv_addr, sockfd_NOTIFY_CLIENT, mainLocalPort, id);
-    printf("SERVER\n");
     connectSocket(NOTIFY_SERVER, username, serv_addr, sockfd_NOTIFY_SERVER, mainLocalPort, id);
 
     sockfd[REQUEST] = sockfd_REQUEST;
@@ -93,18 +90,19 @@ void updateSocket(int newMainServer_fd) {
     setReadFromSocketFunction(readSocketFrontend);
     setWriteInSocketFunction(writeSocketFrontend);
 
+    sleep(1);
     reconnectSockets();
     close(new_socket);
 
 }
 
 int readSocketFrontend(int type, void* destiny, int bytesToRead) {
-    int sockfd = getSocketByType(type), readBytes = -1;
-    while(readBytes < 0) {
-         readBytes = read(sockfd, destiny, bytesToRead);
-         if(readBytes < 0) {
-             sleep(1);
-         }
+    int readBytes = -1;
+    while(readBytes <= 0) {
+        readBytes = read(getSocketByType(type), destiny, bytesToRead);
+        if(readBytes <= 0) {
+            sleep(1);
+        }
     }
     return readBytes;
 }
