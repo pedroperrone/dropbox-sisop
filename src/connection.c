@@ -577,8 +577,7 @@ void notifyClient(USER *user) {
         bzero(&(serv_addr.sin_zero), 8);
 
         if (connect(socketfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-            fprintf(stderr, "ERROR connecting to socket\n");
-            exit(1);
+            continue;
         }
 
         if (write(socketfd, &myPort, sizeof(int)) != sizeof(int)) {
