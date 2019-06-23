@@ -1,11 +1,12 @@
 #include "../include/replica_manager.h"
 #include "../include/connection.h"
+#include "../include/user.h"
 #include <stdlib.h>
 #include <sys/select.h>
 #include <pthread.h>
 #include <time.h>
 
-int id, primary_id, num_replica_managers;
+int id, port, primary_id, num_replica_managers;
 ROLE role;
 REPLICA_MANAGER *replica_managers; // Array of replica_managers indexed by id.
 
@@ -24,7 +25,7 @@ int main(int argc, char *argv[]) {
   setReadFromSocketFunction(readSocketServer);
   setWriteInSocketFunction(writeSocketServer);
 
-  int port = atoi(argv[1]);
+  port = atoi(argv[1]);
   id = atoi(argv[2]);
   num_replica_managers = (argc - 3) / 2 + 1;
   primary_id = num_replica_managers - 1;
@@ -54,6 +55,10 @@ int main(int argc, char *argv[]) {
   connectToOtherReplicaManagers(port);
 
   pthread_create(&receive_election_thread, NULL, receiveElectionAndCoordinator, NULL);
+
+  if(initializeUsersList() == 0) {
+    perror("Error initializing users list\n");
+  }
 
   printf("Ready!\n\n");
   if (role == PRIMARY) {
@@ -184,29 +189,68 @@ void* receiveElectionAndCoordinator(void *arg) {
 }
 
 void primary() {
-  // TODO: implementar lógica de servidor primário.
-  while (1);
+  int server_fd;
+  USER *user;
+  int rmSockets[num_replica_managers];
+
+  for (int rm_id = 0; rm_id < num_replica_managers; rm_id++) {
+    rmSockets[rm_id] = replica_managers[rm_id].sockets[REPLICATION];
+  }
+
+  setRmSockets(rmSockets, num_replica_managers);
+  server_fd = initializeMainSocket(port, 10);
+  while(1) {
+    user = handleNewRequest(server_fd);
+    replicateSession(user);
+  }
 }
 
 void backup() {
   while (1) {
     int socket = replica_managers[primary_id].sockets[REPLICATION];
+    //USER *user = NULL;
+    COMMAND_PACKAGE commandPackage;
 
-    // TODO: Ler e aplicar atualização.
-    int foo;
-    if (readAmountOfBytes(&foo, socket, sizeof(int)) != 0) {
+    if (receiveCommandPackage(&commandPackage, socket) != 0) {
       replica_managers[primary_id].valid = 0;
       startElection();
       if (role == PRIMARY) break;
     }
     else {
-
+      switch (commandPackage.command) {
+      case UPLOAD:
+        printf("UPLOAD\n");
+        receiveFile(socket, commandPackage, SERVER);
+        break;
+      case DELETE:
+        printf("DELETE\n");
+        deleteFile(socket, commandPackage, SERVER);
+        break;
+      case CREATE_SESSION:
+        printf("CREATE SESSION\n");
+        receiveUserInfo(socket);
+        //printUsers();
+        break;
+      default:
+        break;
+      }
     }
   }
 
-  // TODO: Avisar os clientes que este é o novo primário.
-
+  notifyClients();
   primary();
+}
+
+void replicateSession(USER *user) {
+  int socket;
+  if (user == NULL) return;
+
+  printf("Replicando user %s\n", user->username);
+  for (int rm_id = 0; rm_id < num_replica_managers; rm_id++) {
+    if (!replica_managers[rm_id].valid) continue;
+    socket = replica_managers[rm_id].sockets[REPLICATION];
+    sendCreateSession(user, socket);
+  }
 }
 
 void startElection() {

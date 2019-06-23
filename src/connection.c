@@ -6,6 +6,9 @@ char successByteMessage[1] = {SUCCESS_BYTE_MESSAGE};
 int (*readFromSocket)(int, void *, int);
 int (*writeInSocket)(int, void *, int);
 
+int *rmSockets;
+int rmSocketsSize = 0;
+
 int createSocket(char *hostname, int port) {
     int sockfd;
     struct sockaddr_in serv_addr;
@@ -40,7 +43,12 @@ void setWriteInSocketFunction(int (*function)(int, void *, int)) {
     writeInSocket = function;
 }
 
-int connectSocket(SOCKET_TYPE type, char *username, struct sockaddr_in serv_addr, int sockfd) {
+void setRmSockets(int *sockets, int num_replica_managers) {
+    rmSockets = sockets;
+    rmSocketsSize = num_replica_managers;
+}
+
+int connectSocket(SOCKET_TYPE type, char *username, struct sockaddr_in serv_addr, int sockfd, int mainLocalPort) {
     char byte_message;
 
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
@@ -54,6 +62,11 @@ int connectSocket(SOCKET_TYPE type, char *username, struct sockaddr_in serv_addr
     }
 
     if (write(sockfd, &type, sizeof(SOCKET_TYPE)) != sizeof(SOCKET_TYPE)) {
+        fprintf(stderr, "ERROR writing socket type to socket\n");
+        exit(1);
+    }
+
+    if (write(sockfd, &mainLocalPort, sizeof(mainLocalPort)) != sizeof(mainLocalPort)) {
         fprintf(stderr, "ERROR writing socket type to socket\n");
         exit(1);
     }
@@ -103,11 +116,12 @@ int initializeMainSocket(int port, int list_queue_size) {
     return serverfd;
 }
 
-void handleNewRequest(int mainSocket) {
-    int new_socket, addrlen, *newSocketPointer;
+USER* handleNewRequest(int mainSocket) {
+    int new_socket, addrlen, *newSocketPointer, port;
     pthread_t deamonThread;
     struct sockaddr_in cliendAddress;
     char username[USERNAME_LENGTH];
+    char userAddress[IP_LENGTH];
     SOCKET_TYPE socket_type;
 
     // Array of pointers to functions that receive (void *) and return (void *).
@@ -136,15 +150,38 @@ void handleNewRequest(int mainSocket) {
         exit(EXIT_FAILURE);
     }
 
-    if (createSession(username, new_socket, socket_type) != 0) {
+    port = getUserPort(new_socket);
+
+    if (port < 0) {
+        perror("Error receiving user local port");
+        exit(EXIT_FAILURE);
+    }
+
+    if(getUserAddress(new_socket, userAddress) != 0) {
+        perror("Error receiving user address");
+        exit(EXIT_FAILURE);
+    }
+
+    if (createSession(username, new_socket, socket_type, userAddress, port) != 0) {
         write(new_socket, failureByteMessage, 1);
         close(new_socket);
-        return;
+        return NULL;
     }
+
     write(new_socket, successByteMessage, 1);
     memcpy(newSocketPointer, &new_socket, sizeof(int));
     pthread_create(&deamonThread, NULL, processConnection[socket_type],
                    (void *)newSocketPointer);
+
+    return (USER*) findUser(username);
+}
+
+int getHostname(int new_socket, char hostname[]) {
+    return readAmountOfBytes(hostname, new_socket, IP_LENGTH);
+}
+
+int getPort(int new_socket, int *port) {
+    return readAmountOfBytes(port, new_socket, sizeof(int));
 }
 
 int getUsernameFromNewConnection(int newSocket, char username[]) {
@@ -161,21 +198,43 @@ int getSocketType(int socket) {
     return socket_type;
 }
 
+int getUserPort(int socket) {
+    int port;
+    
+    if (readAmountOfBytes(&port, socket, sizeof(port)) != 0) {
+        return -1;
+    }
+
+    return port;
+}
+
+int getUserAddress(int socket, char userAddress[]) {
+    struct sockaddr_in addr;
+    socklen_t addr_size = sizeof(struct sockaddr_in);
+    int res = getpeername(socket, (struct sockaddr *)&addr, &addr_size);
+    if (res != 0) return -1;
+    strcpy(userAddress, inet_ntoa(addr.sin_addr));
+    return 0;
+}
+
 void* processConnection_REQUEST(void *clientSocket) {
     // Código provisório para manter a funcionalidade implementada até agora.
     // O REQUEST atende requisições de download, list_server e get_sync_dir.
     int socket = *(int *) clientSocket;
     USER *user = findUserFromSocket(socket);
     COMMAND_PACKAGE commandPackage;
+
     do {
         receiveCommandPackage(&commandPackage, socket);
         switch (commandPackage.command) {
         case UPLOAD:
             receiveFile(socket, commandPackage, SERVER);
+            replicateFile(commandPackage.filename, user->username);
             enqueueSyncFile(-1, commandPackage, UPLOAD, user);
             break;
         case DELETE:
             deleteFile(socket, commandPackage, SERVER);
+            replicateDeletedFile(commandPackage.filename, user->username);
             enqueueSyncFile(-1, commandPackage, DELETE, user);
             break;
         case LIST_SERVER:
@@ -227,12 +286,12 @@ void* processConnection_NOTIFY_CLIENT(void *clientSocket) {
                         if((file = fopen(file_path, "r")) == NULL) {
                             printf("Error openning file '%s'", file_path);
                         } else {
-                            sendFile(file, user->sockets[i][NOTIFY_CLIENT], sync_file->filename);
+                            sendFile(file, user->sockets[i][NOTIFY_CLIENT], sync_file->filename, user->username);
                             fclose(file);
                         }
                     }
                     else {
-                        sendRemove(user->sockets[i][NOTIFY_CLIENT], sync_file->filename);
+                        sendRemove(user->sockets[i][NOTIFY_CLIENT], sync_file->filename, user->username);
                     }
                 }
             }
@@ -260,10 +319,12 @@ void* processConnection_NOTIFY_SERVER(void *clientSocket) {
         switch (commandPackage.command) {
         case UPLOAD:
             receiveFile(socket, commandPackage, SERVER);
+            replicateFile(commandPackage.filename, user->username);
             enqueueSyncFile(socket, commandPackage, UPLOAD, user);
             break;
         case DELETE:
             deleteFile(socket, commandPackage, SERVER);
+            replicateDeletedFile(commandPackage.filename, user->username);
             enqueueSyncFile(socket, commandPackage, DELETE, user);
             break;
         default:
@@ -280,12 +341,13 @@ void destroyConnection(int socketDescriptor) {
     close(socketDescriptor);
 }
 
-int sendFile(FILE *fileDescriptor, int socketDescriptor, char filename[]) {
+int sendFile(FILE *fileDescriptor, int socketDescriptor, char filename[], char username[]) {
     PACKAGE package;
     COMMAND_PACKAGE commandPackage;
 
     commandPackage.command = UPLOAD;
     commandPackage.dataPackagesAmount = calculateFileSize(fileDescriptor);
+    strncpy((char*) &(commandPackage.username), username, USERNAME_LENGTH);
     strncpy((char*) &(commandPackage.filename), filename, FILENAME_LENGTH);
     writeInSocket(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE));
     if(fileDescriptor == NULL) {
@@ -317,9 +379,10 @@ int sendExit(int socketDescriptor) {
     return 1;
 }
 
-int sendRemove(int socketDescriptor, char filename[]) {
+int sendRemove(int socketDescriptor, char filename[], char username[]) {
     COMMAND_PACKAGE commandPackage;
     commandPackage.command = DELETE;
+    strncpy((char*) &(commandPackage.username), username, USERNAME_LENGTH);
     strncpy((char*) &(commandPackage.filename), filename, FILENAME_LENGTH);
     if (writeInSocket(socketDescriptor, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
         perror("Error on sending data");
@@ -346,7 +409,7 @@ int sendDownload(int socketDescriptor, COMMAND_PACKAGE commandPackage) {
         perror("Error opening file\n");
         return 0;
     }
-    ret = sendFile(file, socketDescriptor, (char*) commandPackage.filename);
+    ret = sendFile(file, socketDescriptor, (char*) commandPackage.filename, user->username);
     fclose(file);
 
     return ret;
@@ -385,7 +448,7 @@ int sendSyncDir(int socketDescriptor) {
             return 0;
         }
 
-        sendFile(file, socketDescriptor, (char*) fileInfo->filename);
+        sendFile(file, socketDescriptor, (char*) fileInfo->filename, user->username);
         fclose(file);
 
         current = current->next;
@@ -402,19 +465,134 @@ int sendSyncDir(int socketDescriptor) {
     return 0;
 }
 
+int sendCreateSession(USER *user, int socket) {
+    COMMAND_PACKAGE commandPackage;
+    commandPackage.command = CREATE_SESSION;
+    if (writeInSocket(socket, &commandPackage, sizeof(COMMAND_PACKAGE)) < sizeof(COMMAND_PACKAGE)) {
+        perror("Error on sending data");
+        return 0;
+    }
+
+    if (writeInSocket(socket, user->username, USERNAME_LENGTH) < USERNAME_LENGTH) {
+        perror("Error on sending data");
+        return 0;
+    }
+
+    for (int i = 0; i < NUM_SESSIONS; i++) {
+        if (writeInSocket(socket, user->ipaddresses[i], IP_LENGTH) < IP_LENGTH) {
+            perror("Error on sending data");
+            return 0;
+        }
+
+        if (writeInSocket(socket, &user->ports[i], sizeof(user->ports[i])) < sizeof(user->ports[i])) {
+            perror("Error on sending data");
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+void receiveUserInfo(int socket) {
+    char username[USERNAME_LENGTH];
+    char ipaddresses[2][IP_LENGTH];
+    int ports[2];
+    USER *user;
+
+    readAmountOfBytes(username, socket, USERNAME_LENGTH);
+    for (int i = 0; i < NUM_SESSIONS; i++) {
+        readAmountOfBytes(ipaddresses[i], socket, IP_LENGTH);
+        readAmountOfBytes(&ports[i], socket, sizeof(int));
+    }
+
+    user = findUser(username);
+
+    if (!user) {
+        user = (USER*) malloc(sizeof(USER));
+        memcpy(&(user->username), username, USERNAME_LENGTH);
+        user->sync_queue = createList();
+        for (int i = 0; i < NUM_SESSIONS; i++) {
+            user->exit[i] = 0;
+            for (int j = 0; j < SOCKETS_PER_SESSION; j++) {
+                user->sockets[i][j] = 0;
+            }
+        }
+        addUser(user);
+    }
+
+    for (int i = 0; i < NUM_SESSIONS; i++) {
+        memcpy(&(user->ipaddresses[i]), ipaddresses[i], IP_LENGTH);
+        user->ports[i] = ports[i];
+    }
+}
+
+void notifyClients() {
+    LIST *usersList = getUsersList();
+    NODE *current = usersList->head;
+    USER *userPointer;
+    if (current == NULL) return;
+
+    while (current != NULL) {
+        userPointer = (USER *)current->data;
+        notifyClient(userPointer);
+        current = current->next;
+    }
+}
+
+void notifyClient(USER *user) {
+    int socketfd;
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+    NETWORK_ADDRESS serverAddress;
+    char *hostname;
+    int port;
+
+    for (int i = 0; i < NUM_SESSIONS; i++) {
+        hostname = user->ipaddresses[i];
+        port = user->ports[i];
+
+        if (port == 0) continue;
+
+        socketfd = socket(AF_INET, SOCK_STREAM, 0);
+
+        strncpy((char *)&(serverAddress.ip), hostname, IP_LENGTH);
+        serverAddress.port = port;
+        server = gethostbyname(hostname);
+        if (server == NULL) {
+            fprintf(stderr, "ERROR, no such host\n");
+            exit(1);
+        }
+
+        serv_addr.sin_family = AF_INET;
+        serv_addr.sin_port = htons(port);
+        serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
+        bzero(&(serv_addr.sin_zero), 8);
+
+        if (connect(socketfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+            fprintf(stderr, "ERROR connecting to socket\n");
+            exit(1);
+        }
+
+        if (write(socketfd, &port, sizeof(int)) != sizeof(int)) {
+            fprintf(stderr, "ERROR writing port to socket\n");
+            exit(1);
+        }
+
+        if (write(socketfd, hostname, IP_LENGTH) != IP_LENGTH) {
+            fprintf(stderr, "ERROR writing hostname to socket\n");
+            exit(1);
+        }
+    }
+}
+
 int receiveFile(int socketDescriptor, COMMAND_PACKAGE command, LOCATION location) {
     PACKAGE package;
     FILE *receivedFile;
-    USER *user;
     char filename[256];
 
     if(location == SERVER) {
-        user = findUserFromSocket(socketDescriptor);
-        if(user == NULL) {
-            perror("No user with the current socket");
-        }
-        mkdir(user->username, 0777);
-        strcpy(filename, user->username);
+        mkdir(command.username, 0777);
+        strcpy(filename, command.username);
         strcat(filename, "/");
     } else if(location == CLIENT) {
         strcpy(filename, "sync_dir/");
@@ -463,15 +641,10 @@ int requestSyncDir(int socketDescriptor) {
 }
 
 int deleteFile(int socketDescriptor, COMMAND_PACKAGE commandPackage, LOCATION location) {
-    USER *user;
     char filename[FILENAME_LENGTH];
 
     if(location == SERVER) {
-        user = findUserFromSocket(socketDescriptor);
-        if (user == NULL) {
-            perror("No user with the current socket");
-        }
-        strcpy(filename, user->username);
+        strcpy(filename, commandPackage.username);
     } else
         strcpy(filename, "sync_dir");
     strcat(filename, "/");
@@ -642,4 +815,31 @@ int readSocketServer(int sockfd, void *destiny, int bytesToRead) {
 
 int writeSocketServer(int sockfd, void *source, int bytesToWrite) {
     return write(sockfd, source, bytesToWrite);
+}
+
+void replicateFile(char filename[], char username[]) {
+    FILE *file;
+    char *file_path = (char*) malloc(FILENAME_LENGTH);
+
+    strcpy(file_path, username);
+    strcat(file_path, "/");
+    strcat(file_path, filename);
+
+    if((file = fopen(file_path, "r")) == NULL) {
+        printf("Error openning file '%s'", file_path);
+        return;
+    }
+
+    for (int rm_id = 0; rm_id < rmSocketsSize; rm_id++) {
+        if (rmSockets[rm_id] == 0) continue;
+        sendFile(file, rmSockets[rm_id], filename, username);
+    }
+    fclose(file);
+}
+
+void replicateDeletedFile(char filename[], char username[]) {
+    for (int rm_id = 0; rm_id < rmSocketsSize; rm_id++) {
+        if (rmSockets[rm_id] == 0) continue;
+        sendRemove(rmSockets[rm_id], filename, username);
+    }
 }

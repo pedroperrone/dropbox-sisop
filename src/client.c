@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
 
     pthread_create(&handleLocalChangesThread, NULL, handleLocalChanges, NULL);
     pthread_create(&handleRemoteChangesThread, NULL, handleRemoteChanges, NULL);
-    cli();
+    cli(username);
 
     sendExit(REQUEST);
     shutdown(getSocketByType(REQUEST), 2);

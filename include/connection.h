@@ -7,6 +7,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <pthread.h>
@@ -35,6 +36,7 @@ typedef struct command_package {
     COMMAND command;
     int dataPackagesAmount;
     char filename[FILENAME_LENGTH];
+    char username[USERNAME_LENGTH];
 } COMMAND_PACKAGE;
 
 typedef struct file_info {
@@ -49,15 +51,18 @@ typedef struct network_address {
 
 void setPort(int portValue);
 int createSocket(char *hostname, int port);
-int connectSocket(SOCKET_TYPE type, char *username, struct sockaddr_in serv_addr, int sockfd);
+int connectSocket(SOCKET_TYPE type, char *username, struct sockaddr_in serv_addr, int sockfd, int mainLocalPort);
 void* processConnection_REQUEST(void *clientSocket);
 void* processConnection_NOTIFY_CLIENT(void *clientSocket);
 void* processConnection_NOTIFY_SERVER(void *clientSocket);
 int initializeMainSocket(int port, int list_queue_size);
-void handleNewRequest(int mainSocket);
-int sendFile(FILE *fileDescriptor, int socketDescriptor, char filename[]);
+USER* handleNewRequest(int mainSocket);
+int getHostname(int new_socket, char hostname[]);
+int getPort(int new_socket, int *port);
+int sendFile(FILE *fileDescriptor, int socketDescriptor, char filename[], char username[]);
 int sendExit(int socketDescriptor);
-int sendRemove(int socketDescriptor, char filename[]);
+int sendRemove(int socketDescriptor, char filename[], char username[]);
+void receiveUserInfo(int socket);
 int receiveFile(int socketDescriptor, COMMAND_PACKAGE command, LOCATION location);
 int deleteFile(int _socketDescriptor, COMMAND_PACKAGE commandPackage, LOCATION location);
 int receiveCommandPackage(COMMAND_PACKAGE *commandPackage, int socketDescriptor);
@@ -67,6 +72,8 @@ int calculateFileSize(FILE *fileDescriptor);
 int readAmountOfBytes(void *buffer, int socketDescriptor, int amountOfBytes);
 int getUsernameFromNewConnection(int newSocket, char username[]);
 int getSocketType(int socket);
+int getUserPort(int socket);
+int getUserAddress(int socket, char userAddress[]);
 void destroyConnection(int socketDescriptor);
 int listServer(int socketDescriptor);
 void sendListServer(int socketDescriptor);
@@ -79,9 +86,15 @@ int requestDownload(int socketDescriptor, char filename[]);
 int requestSyncDir(int socketDescriptor);
 int sendDownload(int socketDescriptor, COMMAND_PACKAGE commandPackage);
 int sendSyncDir(int socketDescriptor);
+int sendCreateSession(USER *user, int socket);
 void setReadFromSocketFunction(int (*function)(int, void *, int));
 void setWriteInSocketFunction(int (*function)(int, void *, int));
 int readSocketServer(int sockfd, void *destiny, int bytesToRead);
 int writeSocketServer(int sockfd, void *source, int bytesToWrite);
+void setRmSockets(int *sockets, int num_replica_managers);
+void replicateFile(char filename[], char username[]);
+void replicateDeletedFile(char filename[], char username[]);
+void notifyClients();
+void notifyClient(USER *user);
 
 #endif

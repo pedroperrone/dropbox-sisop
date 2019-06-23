@@ -39,9 +39,9 @@ void setNewAddress(char *hostname, int port) {
 }
 
 void reconnectSockets() {
-    connectSocket(REQUEST, username, serv_addr, sockfd[REQUEST]);
-    connectSocket(NOTIFY_CLIENT, username, serv_addr, sockfd[NOTIFY_CLIENT]);
-    connectSocket(NOTIFY_SERVER, username, serv_addr, sockfd[NOTIFY_SERVER]);
+    connectSocket(REQUEST, username, serv_addr, sockfd[REQUEST], mainLocalPort);
+    connectSocket(NOTIFY_CLIENT, username, serv_addr, sockfd[NOTIFY_CLIENT], mainLocalPort);
+    connectSocket(NOTIFY_SERVER, username, serv_addr, sockfd[NOTIFY_SERVER], mainLocalPort);
 }
 
 int getSocketByType(SOCKET_TYPE type) {
@@ -58,21 +58,26 @@ void* waitForNewMainServer() {
 }
 
 void updateSocket(int newMainServer_fd) {
-    int new_socket, addrlen, old_socket;
+    int new_socket, addrlen;
     struct sockaddr_in cliendAddress;
-    SOCKET_TYPE socket_type;
+    char hostname[IP_LENGTH];
+    int port;
     if ((new_socket = accept(newMainServer_fd, (struct sockaddr *)&cliendAddress, (socklen_t *)&addrlen)) < 0) {
         perror("accept");
         exit(EXIT_FAILURE);
     }
-    setReadFromSocketFunction(readSocketServer);
-    setWriteInSocketFunction(writeSocketServer);
-    socket_type = getSocketType(new_socket);
-    setReadFromSocketFunction(readSocketFrontend);
-    setWriteInSocketFunction(writeSocketFrontend);
-    old_socket = getSocketByType(socket_type);
-    close(old_socket);
-    sockfd[socket_type] = new_socket;
+    printf("\nAceitou\n");
+    printf("Socket: %d\n", new_socket);
+    printf("%d\n", readAmountOfBytes(&port, new_socket, 1));
+    getPort(new_socket, &port);
+    printf("Recebeu porta\n");
+    getHostname(new_socket, hostname);
+    printf("Recebeu ip\n");
+    setNewAddress(hostname, port);
+    close(getSocketByType(REQUEST));
+    close(getSocketByType(NOTIFY_CLIENT));
+    close(getSocketByType(NOTIFY_SERVER));
+    reconnectSockets();
 }
 
 int readSocketFrontend(int type, void* destiny, int bytesToRead) {

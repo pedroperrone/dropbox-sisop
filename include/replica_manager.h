@@ -2,6 +2,7 @@
 #define REPLICA_MANAGER_H
 
 #include <sys/select.h>
+#include "../include/user.h"
 
 #define NUM_SOCKETS_PER_RM 3
 
@@ -48,6 +49,7 @@ RECEIVED_ANSWER_RETVAL receivedAnswer(fd_set *readfds);
 void primary();
 void backup();
 
+void replicateSession(USER *user);
 void startElection();
 
 #endif // REPLICA_MANAGER_H

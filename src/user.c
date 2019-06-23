@@ -11,7 +11,7 @@ int initializeUsersList() {
 }
 
 int createSession(char username[], int socketDescriptor,
-                  SOCKET_TYPE socket_type)
+                  SOCKET_TYPE socket_type, char ipaddress[], int port)
 {
     USER *userPointer;
 
@@ -37,7 +37,7 @@ int createSession(char username[], int socketDescriptor,
 
     pthread_mutex_lock(&createSession_lock2);
     if(userHasFreeSession(userPointer, socket_type)) {
-        setSession(userPointer, socketDescriptor, socket_type);
+        setSession(userPointer, socketDescriptor, socket_type, ipaddress, port);
         pthread_mutex_unlock(&createSession_lock2);
         return 0;
     }
@@ -63,10 +63,12 @@ int allSocketsAreFree(USER *user) {
     return 1;
 }
 
-void setSession(USER* user, int socketDescriptor, SOCKET_TYPE socket_type) {
+void setSession(USER* user, int socketDescriptor, SOCKET_TYPE socket_type, char ipaddress[], int port) {
     for (int i = 0; i < NUM_SESSIONS; i++) {
         if (user->sockets[i][socket_type] == 0) {
             user->sockets[i][socket_type] = socketDescriptor;
+            memcpy(&(user->ipaddresses[i]), ipaddress, IP_LENGTH);
+            user->ports[i] = port;
             return;
         }
     }
@@ -83,6 +85,8 @@ void printUsers() {
 
         for (int i = 0; i < NUM_SESSIONS; i++) {
             printf("Session %d:\n", i);
+            printf("  Ip: %s\n", userPtr->ipaddresses[i]);
+            printf("  Port: %d\n", userPtr->ports[i]);
             for (int j = 0; j < SOCKETS_PER_SESSION; j++) {
                 printf("  Socket %d: %d\n", j, userPtr->sockets[i][j]);
             }
@@ -184,4 +188,12 @@ int getSession(USER *user, int socketDescriptor) {
         }
     }
     return -1;
+}
+
+void addUser(USER *user) {
+    add(user, usersList);
+}
+
+LIST *getUsersList() {
+    return usersList;
 }
