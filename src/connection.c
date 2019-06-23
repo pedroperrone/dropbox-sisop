@@ -54,7 +54,7 @@ void setRmInfos(int *sockets, int *valid, int num_replica_managers, int port) {
     myPort = port;
 }
 
-int connectSocket(SOCKET_TYPE type, char *username, struct sockaddr_in serv_addr, int sockfd, int mainLocalPort) {
+int connectSocket(SOCKET_TYPE type, char *username, struct sockaddr_in serv_addr, int sockfd, int mainLocalPort, int id) {
     char byte_message;
 
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
@@ -77,17 +77,30 @@ int connectSocket(SOCKET_TYPE type, char *username, struct sockaddr_in serv_addr
         exit(1);
     }
 
+    if (type == REQUEST) {
+        if (read(sockfd, &id, sizeof(int)) != sizeof(int)) {
+            fprintf(stderr, "ERROR reading from socket\n");
+            exit(1);
+        }
+    } else {
+        if (write(sockfd, &id, sizeof(int)) != sizeof(int)) {
+            fprintf(stderr, "ERROR writing socket type to socket\n");
+            exit(1);
+        }
+    }
+
     if (read(sockfd, &byte_message, 1) != 1) {
         fprintf(stderr, "ERROR reading from socket\n");
         exit(1);
     }
+
 
     if (byte_message != SUCCESS_BYTE_MESSAGE) {
         fprintf(stderr, "ERROR establishing a new session\n");
         exit(1);
     }
 
-    return sockfd;
+    return id;
 }
 
 int initializeMainSocket(int port, int list_queue_size) {
@@ -123,7 +136,7 @@ int initializeMainSocket(int port, int list_queue_size) {
 }
 
 USER* handleNewRequest(int mainSocket) {
-    int new_socket, addrlen, *newSocketPointer, port;
+    int new_socket, addrlen, *newSocketPointer, port, id;
     pthread_t deamonThread;
     struct sockaddr_in cliendAddress;
     char username[USERNAME_LENGTH];
@@ -158,6 +171,8 @@ USER* handleNewRequest(int mainSocket) {
 
     port = getUserPort(new_socket);
 
+    printf("Type: %d\n", socket_type);
+
     if (port < 0) {
         perror("Error receiving user local port");
         exit(EXIT_FAILURE);
@@ -168,10 +183,26 @@ USER* handleNewRequest(int mainSocket) {
         exit(EXIT_FAILURE);
     }
 
-    if (createSession(username, new_socket, socket_type, userAddress, port) != 0) {
-        write(new_socket, failureByteMessage, 1);
-        close(new_socket);
-        return NULL;
+    if (socket_type == REQUEST) {
+        id = createSession(username, new_socket, socket_type, userAddress, port, -1);
+        printf("Id: %d\n", id);
+        write(new_socket, &id, sizeof(int));
+        if (id < 0) {
+            write(new_socket, failureByteMessage, 1);
+            close(new_socket);
+            return NULL;
+        }
+    } else {
+        if (read(new_socket, &id, sizeof(int)) != sizeof(int)) {
+            fprintf(stderr, "ERROR reading from socket\n");
+            exit(1);
+        }
+        printf("Id: %d\n", id);
+        if (createSession(username, new_socket, socket_type, userAddress, port, id) < 0) {
+            write(new_socket, failureByteMessage, 1);
+            close(new_socket);
+            return NULL;
+        }
     }
 
     write(new_socket, successByteMessage, 1);
@@ -238,6 +269,7 @@ void* processConnection_REQUEST(void *clientSocket) {
             receiveFile(socket, commandPackage, SERVER);
             replicateFile(commandPackage.filename, user->username);
             enqueueSyncFile(-1, commandPackage, UPLOAD, user);
+            printUsers();
             break;
         case DELETE:
             deleteFile(socket, commandPackage, SERVER);
@@ -290,12 +322,15 @@ void* processConnection_NOTIFY_CLIENT(void *clientSocket) {
                    user->sockets[i][REQUEST] != 0)
                    {
                     if(sync_file->action == UPLOAD) {
+                        printf("SENDING FILE TO CLIENT %s WITH SOCKET %d AND PORT %d\n", user->username, user->sockets[i][NOTIFY_CLIENT], user->ports[i]);
                         if((file = fopen(file_path, "r")) == NULL) {
                             printf("Error openning file '%s'", file_path);
                         } else {
                             sendFile(file, user->sockets[i][NOTIFY_CLIENT], sync_file->filename, user->username);
                             fclose(file);
                         }
+                        printf("SENDING FILE TO CLIENT OK\n");
+
                     }
                     else {
                         sendRemove(user->sockets[i][NOTIFY_CLIENT], sync_file->filename, user->username);
@@ -541,9 +576,9 @@ void notifyClients() {
 
     while (current != NULL) {
         userPointer = (USER *)current->data;
-        notifyClient(userPointer);
         current = current->next;
         removeFromUsersList(userPointer);
+        notifyClient(userPointer);
     }
 }
 

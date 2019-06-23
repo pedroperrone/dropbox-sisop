@@ -29,10 +29,10 @@ typedef struct user {
 
 int initializeUsersList();
 int createSession(char username[], int socketDescriptor,
-                  SOCKET_TYPE socket_type, char ipaddress[], int port);
+                  SOCKET_TYPE socket_type, char ipaddress[], int port, int id);
 int userHasFreeSession(USER *user, SOCKET_TYPE socket_type);
 int allSocketsAreFree(USER *user);
-void setSession(USER *user, int socketDescriptor, SOCKET_TYPE socket_type, char ipaddress[], int port);
+int setSession(USER *user, int socketDescriptor, SOCKET_TYPE socket_type, char ipaddress[], int port, int id);
 USER *findUserFromSocket(int socketDescriptor);
 int socketBelongsToUser(USER *user, int socketDescriptor);
 void *findUser(char username[]);

@@ -51,7 +51,7 @@ typedef struct network_address {
 
 void setPort(int portValue);
 int createSocket(char *hostname, int port);
-int connectSocket(SOCKET_TYPE type, char *username, struct sockaddr_in serv_addr, int sockfd, int mainLocalPort);
+int connectSocket(SOCKET_TYPE type, char *username, struct sockaddr_in serv_addr, int sockfd, int mainLocalPort, int id);
 void* processConnection_REQUEST(void *clientSocket);
 void* processConnection_NOTIFY_CLIENT(void *clientSocket);
 void* processConnection_NOTIFY_SERVER(void *clientSocket);

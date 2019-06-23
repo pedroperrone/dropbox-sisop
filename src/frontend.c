@@ -39,17 +39,25 @@ void setNewAddress(char *hostname, int port) {
 }
 
 void reconnectSockets() {
+    int id;
+    int sockfd_REQUEST = socket(AF_INET, SOCK_STREAM, 0);
+    int sockfd_NOTIFY_CLIENT = socket(AF_INET, SOCK_STREAM, 0);
+    int sockfd_NOTIFY_SERVER = socket(AF_INET, SOCK_STREAM, 0);
+
     close(sockfd[REQUEST]);
     close(sockfd[NOTIFY_CLIENT]);
     close(sockfd[NOTIFY_SERVER]);
 
-    sockfd[REQUEST] = socket(AF_INET, SOCK_STREAM, 0);
-    sockfd[NOTIFY_CLIENT] = socket(AF_INET, SOCK_STREAM, 0);
-    sockfd[NOTIFY_SERVER] = socket(AF_INET, SOCK_STREAM, 0);
+    printf("REQUEST\n");
+    id = connectSocket(REQUEST, username, serv_addr, sockfd_REQUEST, mainLocalPort, -1);
+    printf("CLIENT\n");
+    connectSocket(NOTIFY_CLIENT, username, serv_addr, sockfd_NOTIFY_CLIENT, mainLocalPort, id);
+    printf("SERVER\n");
+    connectSocket(NOTIFY_SERVER, username, serv_addr, sockfd_NOTIFY_SERVER, mainLocalPort, id);
 
-    connectSocket(REQUEST, username, serv_addr, sockfd[REQUEST], mainLocalPort);
-    connectSocket(NOTIFY_CLIENT, username, serv_addr, sockfd[NOTIFY_CLIENT], mainLocalPort);
-    connectSocket(NOTIFY_SERVER, username, serv_addr, sockfd[NOTIFY_SERVER], mainLocalPort);
+    sockfd[REQUEST] = sockfd_REQUEST;
+    sockfd[NOTIFY_CLIENT] = sockfd_NOTIFY_CLIENT;
+    sockfd[NOTIFY_SERVER] = sockfd_NOTIFY_SERVER;
 }
 
 int getSocketByType(SOCKET_TYPE type) {
@@ -86,6 +94,7 @@ void updateSocket(int newMainServer_fd) {
     setWriteInSocketFunction(writeSocketFrontend);
 
     reconnectSockets();
+    close(new_socket);
 
 }
 
