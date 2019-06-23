@@ -197,3 +197,7 @@ void addUser(USER *user) {
 LIST *getUsersList() {
     return usersList;
 }
+
+void removeFromUsersList(USER *user) {
+    removeFromList(user, usersList);
+}

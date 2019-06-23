@@ -192,12 +192,15 @@ void primary() {
   int server_fd;
   USER *user;
   int rmSockets[num_replica_managers];
+  int rmValid[num_replica_managers];
 
   for (int rm_id = 0; rm_id < num_replica_managers; rm_id++) {
     rmSockets[rm_id] = replica_managers[rm_id].sockets[REPLICATION];
+    rmValid[rm_id] = replica_managers[rm_id].valid;
   }
 
-  setRmSockets(rmSockets, num_replica_managers);
+  setRmInfos(rmSockets, rmValid, num_replica_managers, port);
+  notifyClients();
   server_fd = initializeMainSocket(port, 10);
   while(1) {
     user = handleNewRequest(server_fd);
@@ -219,17 +222,13 @@ void backup() {
     else {
       switch (commandPackage.command) {
       case UPLOAD:
-        printf("UPLOAD\n");
         receiveFile(socket, commandPackage, SERVER);
         break;
       case DELETE:
-        printf("DELETE\n");
         deleteFile(socket, commandPackage, SERVER);
         break;
       case CREATE_SESSION:
-        printf("CREATE SESSION\n");
         receiveUserInfo(socket);
-        //printUsers();
         break;
       default:
         break;
@@ -237,7 +236,6 @@ void backup() {
     }
   }
 
-  notifyClients();
   primary();
 }
 
@@ -245,7 +243,6 @@ void replicateSession(USER *user) {
   int socket;
   if (user == NULL) return;
 
-  printf("Replicando user %s\n", user->username);
   for (int rm_id = 0; rm_id < num_replica_managers; rm_id++) {
     if (!replica_managers[rm_id].valid) continue;
     socket = replica_managers[rm_id].sockets[REPLICATION];

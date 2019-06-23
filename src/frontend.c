@@ -39,6 +39,14 @@ void setNewAddress(char *hostname, int port) {
 }
 
 void reconnectSockets() {
+    close(sockfd[REQUEST]);
+    close(sockfd[NOTIFY_CLIENT]);
+    close(sockfd[NOTIFY_SERVER]);
+
+    sockfd[REQUEST] = socket(AF_INET, SOCK_STREAM, 0);
+    sockfd[NOTIFY_CLIENT] = socket(AF_INET, SOCK_STREAM, 0);
+    sockfd[NOTIFY_SERVER] = socket(AF_INET, SOCK_STREAM, 0);
+
     connectSocket(REQUEST, username, serv_addr, sockfd[REQUEST], mainLocalPort);
     connectSocket(NOTIFY_CLIENT, username, serv_addr, sockfd[NOTIFY_CLIENT], mainLocalPort);
     connectSocket(NOTIFY_SERVER, username, serv_addr, sockfd[NOTIFY_SERVER], mainLocalPort);
@@ -66,18 +74,19 @@ void updateSocket(int newMainServer_fd) {
         perror("accept");
         exit(EXIT_FAILURE);
     }
-    printf("\nAceitou\n");
-    printf("Socket: %d\n", new_socket);
-    printf("%d\n", readAmountOfBytes(&port, new_socket, 1));
+
+    setReadFromSocketFunction(readSocketServer);
+    setWriteInSocketFunction(writeSocketServer);
+
     getPort(new_socket, &port);
-    printf("Recebeu porta\n");
-    getHostname(new_socket, hostname);
-    printf("Recebeu ip\n");
+    getAddressFromSocket(new_socket, hostname);
     setNewAddress(hostname, port);
-    close(getSocketByType(REQUEST));
-    close(getSocketByType(NOTIFY_CLIENT));
-    close(getSocketByType(NOTIFY_SERVER));
+
+    setReadFromSocketFunction(readSocketFrontend);
+    setWriteInSocketFunction(writeSocketFrontend);
+
     reconnectSockets();
+
 }
 
 int readSocketFrontend(int type, void* destiny, int bytesToRead) {

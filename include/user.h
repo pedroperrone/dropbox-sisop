@@ -42,5 +42,6 @@ void removeSocketFromUser(USER *user, int socketDescriptor);
 int getSession(USER *user, int socketDescriptor);
 void addUser(USER *user);
 LIST *getUsersList();
+void removeFromUsersList(USER *user);
 
 #endif

@@ -7,7 +7,11 @@ int (*readFromSocket)(int, void *, int);
 int (*writeInSocket)(int, void *, int);
 
 int *rmSockets;
+int *rmValid;
 int rmSocketsSize = 0;
+
+int myPort;
+char myAddress[IP_LENGTH];
 
 int createSocket(char *hostname, int port) {
     int sockfd;
@@ -43,9 +47,11 @@ void setWriteInSocketFunction(int (*function)(int, void *, int)) {
     writeInSocket = function;
 }
 
-void setRmSockets(int *sockets, int num_replica_managers) {
+void setRmInfos(int *sockets, int *valid, int num_replica_managers, int port) {
     rmSockets = sockets;
+    rmValid = valid;
     rmSocketsSize = num_replica_managers;
+    myPort = port;
 }
 
 int connectSocket(SOCKET_TYPE type, char *username, struct sockaddr_in serv_addr, int sockfd, int mainLocalPort) {
@@ -157,7 +163,7 @@ USER* handleNewRequest(int mainSocket) {
         exit(EXIT_FAILURE);
     }
 
-    if(getUserAddress(new_socket, userAddress) != 0) {
+    if(getAddressFromSocket(new_socket, userAddress) != 0) {
         perror("Error receiving user address");
         exit(EXIT_FAILURE);
     }
@@ -208,12 +214,12 @@ int getUserPort(int socket) {
     return port;
 }
 
-int getUserAddress(int socket, char userAddress[]) {
+int getAddressFromSocket(int socket, char address[]) {
     struct sockaddr_in addr;
     socklen_t addr_size = sizeof(struct sockaddr_in);
     int res = getpeername(socket, (struct sockaddr *)&addr, &addr_size);
     if (res != 0) return -1;
-    strcpy(userAddress, inet_ntoa(addr.sin_addr));
+    strcpy(address, inet_ntoa(addr.sin_addr));
     return 0;
 }
 
@@ -223,6 +229,7 @@ void* processConnection_REQUEST(void *clientSocket) {
     int socket = *(int *) clientSocket;
     USER *user = findUserFromSocket(socket);
     COMMAND_PACKAGE commandPackage;
+
 
     do {
         receiveCommandPackage(&commandPackage, socket);
@@ -536,6 +543,7 @@ void notifyClients() {
         userPointer = (USER *)current->data;
         notifyClient(userPointer);
         current = current->next;
+        removeFromUsersList(userPointer);
     }
 }
 
@@ -545,18 +553,18 @@ void notifyClient(USER *user) {
     struct hostent *server;
     NETWORK_ADDRESS serverAddress;
     char *hostname;
-    int port;
+    int userPort;
 
     for (int i = 0; i < NUM_SESSIONS; i++) {
         hostname = user->ipaddresses[i];
-        port = user->ports[i];
+        userPort = user->ports[i];
 
-        if (port == 0) continue;
+        if (userPort == 0) continue;
 
         socketfd = socket(AF_INET, SOCK_STREAM, 0);
 
         strncpy((char *)&(serverAddress.ip), hostname, IP_LENGTH);
-        serverAddress.port = port;
+        serverAddress.port = userPort;
         server = gethostbyname(hostname);
         if (server == NULL) {
             fprintf(stderr, "ERROR, no such host\n");
@@ -564,7 +572,7 @@ void notifyClient(USER *user) {
         }
 
         serv_addr.sin_family = AF_INET;
-        serv_addr.sin_port = htons(port);
+        serv_addr.sin_port = htons(userPort);
         serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
         bzero(&(serv_addr.sin_zero), 8);
 
@@ -573,13 +581,8 @@ void notifyClient(USER *user) {
             exit(1);
         }
 
-        if (write(socketfd, &port, sizeof(int)) != sizeof(int)) {
+        if (write(socketfd, &myPort, sizeof(int)) != sizeof(int)) {
             fprintf(stderr, "ERROR writing port to socket\n");
-            exit(1);
-        }
-
-        if (write(socketfd, hostname, IP_LENGTH) != IP_LENGTH) {
-            fprintf(stderr, "ERROR writing hostname to socket\n");
             exit(1);
         }
     }
@@ -831,7 +834,7 @@ void replicateFile(char filename[], char username[]) {
     }
 
     for (int rm_id = 0; rm_id < rmSocketsSize; rm_id++) {
-        if (rmSockets[rm_id] == 0) continue;
+        if (rmValid[rm_id] == 0) continue;
         sendFile(file, rmSockets[rm_id], filename, username);
     }
     fclose(file);
@@ -839,7 +842,7 @@ void replicateFile(char filename[], char username[]) {
 
 void replicateDeletedFile(char filename[], char username[]) {
     for (int rm_id = 0; rm_id < rmSocketsSize; rm_id++) {
-        if (rmSockets[rm_id] == 0) continue;
+        if (rmValid[rm_id] == 0) continue;
         sendRemove(rmSockets[rm_id], filename, username);
     }
 }
