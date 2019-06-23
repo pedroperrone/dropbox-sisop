@@ -81,5 +81,7 @@ int sendDownload(int socketDescriptor, COMMAND_PACKAGE commandPackage);
 int sendSyncDir(int socketDescriptor);
 void setReadFromSocketFunction(int (*function)(int, void *, int));
 void setWriteInSocketFunction(int (*function)(int, void *, int));
+int readSocketServer(int sockfd, void *destiny, int bytesToRead);
+int writeSocketServer(int sockfd, void *source, int bytesToWrite);
 
 #endif

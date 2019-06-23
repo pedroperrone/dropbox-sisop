@@ -1,14 +1,6 @@
 #include "../include/connection.h"
 #include "../include/user.h"
 
-int readSocketServer(int sockfd, void* destiny, int bytesToRead) {
-    return read(sockfd, destiny, bytesToRead);
-}
-
-int writeSocketServer(int sockfd, void* source, int bytesToWrite) {
-    return write(sockfd, source, bytesToWrite);
-}
-
 int main(int argc, char *argv[]) {
     int server_fd;
     int port = atoi(argv[1]);

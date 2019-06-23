@@ -635,3 +635,11 @@ void enqueueSyncFile(int sockfd, COMMAND_PACKAGE command, int action, USER *user
     sync->action = action;
     add(sync, user->sync_queue);
 }
+
+int readSocketServer(int sockfd, void *destiny, int bytesToRead) {
+    return read(sockfd, destiny, bytesToRead);
+}
+
+int writeSocketServer(int sockfd, void *source, int bytesToWrite) {
+    return write(sockfd, source, bytesToWrite);
+}
