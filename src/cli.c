@@ -1,5 +1,7 @@
 #include "../include/cli.h"
 
+char username[USERNAME_LENGTH];
+
 void read_line(char *command, char *argument) {
     char input[100];
 
@@ -26,7 +28,7 @@ void upload(int socketDescriptor, char *file_path) {
     if(file == NULL)
         printf("Error opening file\n");
     else {
-        sendFile(file, socketDescriptor, filename);
+        sendFile(file, socketDescriptor, filename, username);
         fclose(file);
     }
 }
@@ -43,7 +45,7 @@ void download(int socketDescriptor, char *file_name) {
 }
 
 void delete(int socketDescriptor, char *file_name) {
-    sendRemove(socketDescriptor, file_name);
+    sendRemove(socketDescriptor, file_name, username);
 }
 
 void list_server(int socketDescriptor) {
@@ -77,9 +79,10 @@ void get_sync_dir(int socketDescriptor) {
     }
 }
 
-void cli() {
+void cli(char user_name[]) {
     char command[MAX_COMMAND_SIZE];
     char argument[MAX_COMMAND_SIZE];
+    memcpy(&(username), user_name, USERNAME_LENGTH);
     while(TRUE) {
         read_line(command, argument);
 

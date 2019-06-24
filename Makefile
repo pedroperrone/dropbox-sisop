@@ -5,7 +5,7 @@ BIN_DIR=./bin
 SRC_DIR=./src
 FLAGS=-lpthread -lm -Wall
 
-all: server client replica_manager
+all: client replica_manager
 
 server: server.o connection.o frontend.o
 	$(CC) -o dropboxServer $(BIN_DIR)/connection.o $(BIN_DIR)/server.o $(BIN_DIR)/user.o $(BIN_DIR)/linked_list.o $(BIN_DIR)/frontend.o $(FLAGS)

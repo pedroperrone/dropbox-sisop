@@ -8,7 +8,8 @@ typedef enum COMMAND {
   END_GET_SYNC_DIR,
   DELETE,
   LIST_SERVER,
-  EXIT
+  EXIT,
+  CREATE_SESSION
 } COMMAND;
 
 #endif

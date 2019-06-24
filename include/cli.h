@@ -7,6 +7,7 @@
 #include "../include/frontend.h"
 
 #define MAX_COMMAND_SIZE 100
+#define USERNAME_LENGTH 64
 #define FALSE 0
 #define TRUE 1
 
@@ -17,7 +18,7 @@ void delete(int socketDescriptor, char *file_name);
 void list_server(int socketDescriptor);
 void list_client(int socketDescriptor);
 void get_sync_dir(int socketDescriptor);
-void cli();
+void cli(char user_name[]);
 void printListOfFileInfo(LIST *fileInfos);
 
 #endif

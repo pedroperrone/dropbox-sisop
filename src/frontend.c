@@ -39,9 +39,22 @@ void setNewAddress(char *hostname, int port) {
 }
 
 void reconnectSockets() {
-    connectSocket(REQUEST, username, serv_addr, sockfd[REQUEST]);
-    connectSocket(NOTIFY_CLIENT, username, serv_addr, sockfd[NOTIFY_CLIENT]);
-    connectSocket(NOTIFY_SERVER, username, serv_addr, sockfd[NOTIFY_SERVER]);
+    int id;
+    int sockfd_REQUEST = socket(AF_INET, SOCK_STREAM, 0);
+    int sockfd_NOTIFY_CLIENT = socket(AF_INET, SOCK_STREAM, 0);
+    int sockfd_NOTIFY_SERVER = socket(AF_INET, SOCK_STREAM, 0);
+
+    close(sockfd[REQUEST]);
+    close(sockfd[NOTIFY_CLIENT]);
+    close(sockfd[NOTIFY_SERVER]);
+
+    id = connectSocket(REQUEST, username, serv_addr, sockfd_REQUEST, mainLocalPort, -1);
+    connectSocket(NOTIFY_CLIENT, username, serv_addr, sockfd_NOTIFY_CLIENT, mainLocalPort, id);
+    connectSocket(NOTIFY_SERVER, username, serv_addr, sockfd_NOTIFY_SERVER, mainLocalPort, id);
+
+    sockfd[REQUEST] = sockfd_REQUEST;
+    sockfd[NOTIFY_CLIENT] = sockfd_NOTIFY_CLIENT;
+    sockfd[NOTIFY_SERVER] = sockfd_NOTIFY_SERVER;
 }
 
 int getSocketByType(SOCKET_TYPE type) {
@@ -58,30 +71,38 @@ void* waitForNewMainServer() {
 }
 
 void updateSocket(int newMainServer_fd) {
-    int new_socket, addrlen, old_socket;
+    int new_socket, addrlen;
     struct sockaddr_in cliendAddress;
-    SOCKET_TYPE socket_type;
+    char hostname[IP_LENGTH];
+    int port;
     if ((new_socket = accept(newMainServer_fd, (struct sockaddr *)&cliendAddress, (socklen_t *)&addrlen)) < 0) {
         perror("accept");
         exit(EXIT_FAILURE);
     }
+
     setReadFromSocketFunction(readSocketServer);
     setWriteInSocketFunction(writeSocketServer);
-    socket_type = getSocketType(new_socket);
+
+    getPort(new_socket, &port);
+    getAddressFromSocket(new_socket, hostname);
+    setNewAddress(hostname, port);
+
     setReadFromSocketFunction(readSocketFrontend);
     setWriteInSocketFunction(writeSocketFrontend);
-    old_socket = getSocketByType(socket_type);
-    close(old_socket);
-    sockfd[socket_type] = new_socket;
+
+    sleep(1);
+    reconnectSockets();
+    close(new_socket);
+
 }
 
 int readSocketFrontend(int type, void* destiny, int bytesToRead) {
-    int sockfd = getSocketByType(type), readBytes = -1;
-    while(readBytes < 0) {
-         readBytes = read(sockfd, destiny, bytesToRead);
-         if(readBytes < 0) {
-             sleep(1);
-         }
+    int readBytes = -1;
+    while(readBytes <= 0) {
+        readBytes = read(getSocketByType(type), destiny, bytesToRead);
+        if(readBytes <= 0) {
+            sleep(1);
+        }
     }
     return readBytes;
 }
